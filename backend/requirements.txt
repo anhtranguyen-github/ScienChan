@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+langgraph
+langchain
+langchain-openai
+langchain-community
+qdrant-client
+python-dotenv
+pydantic
+pydantic-settings
+httpx
+# For reasoning optimization if needed
+transformers
+torch
