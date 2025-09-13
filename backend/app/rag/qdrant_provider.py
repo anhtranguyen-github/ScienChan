@@ -1,20 +1,20 @@
 import os
 from typing import List, Dict, Optional
-from qdrant_client import QdrantClient
+from qdrant_client import AsyncQdrantClient
 from qdrant_client.http import models as qmodels
 from backend.app.core.config import ai_settings
 
 class QdrantProvider:
     def __init__(self):
-        self.client = QdrantClient(
+        self.client = AsyncQdrantClient(
             host=ai_settings.QDRANT_HOST,
             port=ai_settings.QDRANT_PORT
         )
 
     async def create_collection(self, collection_name: str, vector_size: int = 1536):
         """Create a new collection with optimized HNSW and keyword indexing."""
-        if not self.client.collection_exists(collection_name):
-            self.client.create_collection(
+        if not await self.client.collection_exists(collection_name):
+            await self.client.create_collection(
                 collection_name=collection_name,
                 vectors_config=qmodels.VectorParams(
                     size=vector_size,
@@ -26,7 +26,7 @@ class QdrantProvider:
                 ),
             )
             # Add payload indexing for common fields to speed up filtering/keyword search
-            self.client.create_payload_index(
+            await self.client.create_payload_index(
                 collection_name=collection_name,
                 field_name="text",
                 field_schema="text",
@@ -36,7 +36,7 @@ class QdrantProvider:
 
     async def upsert_documents(self, collection_name: str, vectors, ids, payloads):
         """Upsert vectors into the collection."""
-        self.client.upsert(
+        await self.client.upsert(
             collection_name=collection_name,
             points=qmodels.Batch(
                 ids=ids,
@@ -54,17 +54,18 @@ class QdrantProvider:
         # Qdrant 1.10+ supports advanced Query API
         # For simplicity in this template, we'll use a weighted search approach
         
-        # 1. Vector Search
-        vector_results = self.client.search(
+        # 1. Vector Search using the new Query API
+        response = await self.client.query_points(
             collection_name=collection_name,
-            query_vector=query_vector,
+            query=query_vector,
             limit=limit * 2,
             with_payload=True
         )
+        vector_results = response.points
         
         # 2. Text/Keyword Search (using payload filter as a proxy for simpler setups)
         # In a real production setup, we'd use a separate BM25 index or Qdrant's full-text features
-        text_results = self.client.scroll(
+        text_results_response = await self.client.scroll(
             collection_name=collection_name,
             scroll_filter=qmodels.Filter(
                 must=[
@@ -76,7 +77,8 @@ class QdrantProvider:
             ),
             limit=limit * 2,
             with_payload=True
-        )[0]
+        )
+        text_results = text_results_response[0]
         
         # 3. Combine using Reciprocal Rank Fusion (RRF)
         return self._fuse_results(vector_results, text_results, limit)
