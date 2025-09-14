@@ -12,6 +12,9 @@ pydantic
 pydantic-settings
 httpx
 pypdf
+docx2txt
+python-docx
+markdown
 transformers
 torch
 sentence-transformers
