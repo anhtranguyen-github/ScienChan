@@ -5,6 +5,7 @@ import { useChat } from '@/hooks/use-chat';
 import { cn } from '@/lib/utils';
 import { Send, Bot, User, Trash2, Cpu, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { KnowledgeBase } from '@/components/knowledge-base';
 
 export default function ChatPage() {
   const { messages, isLoading, sendMessage } = useChat();
@@ -27,7 +28,7 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen bg-[#0a0a0b] text-white overflow-hidden font-sans">
       {/* Sidebar - Modern Dark Glass */}
-      <aside className="w-72 bg-[#121214] border-r border-white/5 flex flex-col p-6 gap-6">
+      <aside className="w-80 bg-[#121214] border-r border-white/5 flex flex-col p-6 gap-6 overflow-hidden">
         <div className="flex items-center gap-3 px-2">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
             <Cpu size={22} className="text-white" />
@@ -35,16 +36,13 @@ export default function ChatPage() {
           <span className="text-lg font-bold tracking-tight">AI Architect</span>
         </div>
 
-        <button className="flex items-center gap-3 w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group">
+        <button className="flex items-center gap-3 w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group shrink-0">
           <Trash2 size={18} className="text-gray-400 group-hover:text-white" />
           <span className="text-sm font-medium">Clear Conversations</span>
         </button>
 
-        <div className="flex-1 overflow-y-auto space-y-2 py-4">
-          <div className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-2 mb-4">Recent History</div>
-          <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium">
-            New Workspace Chat
-          </div>
+        <div className="flex-1 overflow-hidden min-h-0">
+          <KnowledgeBase />
         </div>
       </aside>
 
@@ -57,8 +55,8 @@ export default function ChatPage() {
         {/* Header */}
         <header className="h-20 border-b border-white/5 flex items-center px-8 justify-between backdrop-blur-md sticky top-0 z-10 bg-[#0a0a0b]/50">
           <div className="flex items-center gap-3">
-            <div className="w-2h-2 rounded-full bg-green-500 animate-pulse" />
-            <h2 className="text-lg font-semibold">Active Session</h2>
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <h2 className="text-lg font-semibold">Live Reasoning Session</h2>
           </div>
         </header>
 
@@ -75,13 +73,13 @@ export default function ChatPage() {
                   <Bot size={40} className="text-blue-500" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold mb-4 tracking-tight">How can I help you build today?</h1>
+                  <h1 className="text-4xl font-bold mb-2 tracking-tight">AI Reasoning Engine</h1>
                   <p className="text-gray-400 leading-relaxed text-lg">
-                    I'm your agentic reasoning assistant. I can search the web, calculate complex math, and build apps with you in real-time.
+                    Upload documents to the Knowledge Base to enable context-aware retrieval and advanced reasoning.
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4 w-full">
-                  {['Research Next.js architecture', 'Calculate mortgage rates', 'Analyze current market trends', 'Debug Python graph logic'].map((tip) => (
+                  {['Research the uploaded paper', 'Summarize key findings', 'Compare methodologies', 'Extract technical specs'].map((tip) => (
                     <button
                       key={tip}
                       onClick={() => sendMessage(tip)}
@@ -111,13 +109,38 @@ export default function ChatPage() {
                   {message.role === 'user' ? <User size={20} /> : <Bot size={20} className="text-blue-500" />}
                 </div>
 
-                <div className={cn(
-                  "p-6 rounded-3xl leading-relaxed text-[15px] shadow-sm",
-                  message.role === 'user'
-                    ? "bg-[#1e1e21] border border-purple-500/20 text-gray-100 rounded-tr-none"
-                    : "bg-[#161619] border border-white/5 text-gray-200 rounded-tl-none"
-                )}>
-                  {message.content}
+                <div className="flex flex-col gap-3 min-w-0 flex-1">
+                  {message.role === 'assistant' && (message.reasoning_steps?.length || message.tools?.length) && (
+                    <div className="flex flex-wrap gap-2 mb-1">
+                      {message.tools?.map((tool, idx) => (
+                        <span key={idx} className="text-[11px] font-bold px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-sm">
+                          {tool}
+                        </span>
+                      ))}
+                      {message.reasoning_steps?.length > 0 && (
+                        <div className="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/5 text-[12px] text-gray-400 font-medium">
+                          <span className="text-indigo-400 font-bold block mb-1 uppercase tracking-tighter">Thinking Process:</span>
+                          <ul className="space-y-1">
+                            {message.reasoning_steps.map((step, idx) => (
+                              <li key={idx} className="flex gap-2">
+                                <span className="text-indigo-500 opacity-50">•</span>
+                                {step}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className={cn(
+                    "p-6 rounded-3xl leading-relaxed text-[15px] shadow-sm whitespace-pre-wrap",
+                    message.role === 'user'
+                      ? "bg-[#1e1e21] border border-purple-500/20 text-gray-100 rounded-tr-none"
+                      : "bg-[#161619] border border-white/5 text-gray-200 rounded-tl-none"
+                  )}>
+                    {message.content || (isLoading && message.id === messages[messages.length - 1].id ? "..." : "")}
+                  </div>
                 </div>
               </motion.div>
             ))}

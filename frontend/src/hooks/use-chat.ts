@@ -42,12 +42,45 @@ export function useChat() {
                         accumulatedContent += data.delta;
                         setMessages((prev) => {
                             const otherMessages = prev.filter((m) => m.id !== assistantMessageId);
+                            const lastMsg = prev.find((m) => m.id === assistantMessageId);
                             return [
                                 ...otherMessages,
                                 {
                                     id: assistantMessageId,
                                     role: 'assistant',
                                     content: accumulatedContent,
+                                    reasoning_steps: lastMsg?.reasoning_steps,
+                                    tools: lastMsg?.tools,
+                                },
+                            ];
+                        });
+                    } else if (data.type === 'reasoning') {
+                        setMessages((prev) => {
+                            const otherMessages = prev.filter((m) => m.id !== assistantMessageId);
+                            const lastMsg = prev.find((m) => m.id === assistantMessageId);
+                            return [
+                                ...otherMessages,
+                                {
+                                    id: assistantMessageId,
+                                    role: 'assistant',
+                                    content: lastMsg?.content || '',
+                                    reasoning_steps: data.steps,
+                                    tools: lastMsg?.tools,
+                                },
+                            ];
+                        });
+                    } else if (data.type === 'tool_start') {
+                        setMessages((prev) => {
+                            const otherMessages = prev.filter((m) => m.id !== assistantMessageId);
+                            const lastMsg = prev.find((m) => m.id === assistantMessageId);
+                            return [
+                                ...otherMessages,
+                                {
+                                    id: assistantMessageId,
+                                    role: 'assistant',
+                                    content: lastMsg?.content || '',
+                                    reasoning_steps: lastMsg?.reasoning_steps,
+                                    tools: [...(lastMsg?.tools || []), `Running ${data.tool}...`],
                                 },
                             ];
                         });
