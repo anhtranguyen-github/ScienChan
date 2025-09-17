@@ -11,7 +11,24 @@ export interface Message {
 
 export function useChat() {
     const [messages, setMessages] = useState<Message[]>([]);
+    const [threadId, setThreadId] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('chat_thread_id');
+            if (saved) return saved;
+            const newId = Math.random().toString(36).substring(7);
+            localStorage.setItem('chat_thread_id', newId);
+            return newId;
+        }
+        return 'default';
+    });
     const [isLoading, setIsLoading] = useState(false);
+
+    const clearChat = useCallback(() => {
+        setMessages([]);
+        const newId = Math.random().toString(36).substring(7);
+        setThreadId(newId);
+        localStorage.setItem('chat_thread_id', newId);
+    }, []);
 
     const sendMessage = useCallback(async (content: string) => {
         const userMessage: Message = {
@@ -32,7 +49,10 @@ export function useChat() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: content }),
+                body: JSON.stringify({
+                    message: content,
+                    thread_id: threadId
+                }),
                 onmessage(msg) {
                     if (msg.event === 'FatalError') throw new Error(msg.data);
 
@@ -99,7 +119,7 @@ export function useChat() {
             console.error('Failed to send message:', error);
             setIsLoading(false);
         }
-    }, []);
+    }, [threadId]);
 
-    return { messages, isLoading, sendMessage };
+    return { messages, isLoading, sendMessage, clearChat };
 }
