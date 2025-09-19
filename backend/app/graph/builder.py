@@ -36,5 +36,8 @@ workflow.add_conditional_edges(
 workflow.add_edge("tools", "reason")
 workflow.add_edge("generate", END)
 
-# 4. Compile
-app = workflow.compile()
+from langgraph.checkpoint.memory import MemorySaver
+
+# 4. Compile with Persistence
+checkpointer = MemorySaver()
+app = workflow.compile(checkpointer=checkpointer)

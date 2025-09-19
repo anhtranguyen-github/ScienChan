@@ -74,11 +74,12 @@ async def delete_document(name: str):
     await qdrant.delete_document("knowledge_base", name)
     return {"status": "success", "message": f"Document {name} deleted."}
 
-async def stream_graph_updates(message: str) -> AsyncGenerator[str, None]:
-    """Stream events from the LangGraph execution."""
+async def stream_graph_updates(message: str, thread_id: str = "default") -> AsyncGenerator[str, None]:
+    """Stream events from the LangGraph execution with persistence."""
     inputs = {"messages": [HumanMessage(content=message)]}
+    config = {"configurable": {"thread_id": thread_id}}
     
-    async for event in graph_app.astream_events(inputs, version="v2"):
+    async for event in graph_app.astream_events(inputs, config=config, version="v2"):
         kind = event["event"]
         name = event.get("name", "")
         
@@ -101,12 +102,13 @@ async def stream_graph_updates(message: str) -> AsyncGenerator[str, None]:
 
 @app.post("/chat/stream")
 async def chat_stream(request: Request):
-    """Streaming chat endpoint using SSE."""
+    """Streaming chat endpoint using SSE with thread persistence."""
     data = await request.json()
     message = data.get("message")
+    thread_id = data.get("thread_id", "default")
     
     return StreamingResponse(
-        stream_graph_updates(message),
+        stream_graph_updates(message, thread_id),
         media_type="text/event-stream"
     )
 
