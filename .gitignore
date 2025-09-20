@@ -46,3 +46,14 @@ backend/app/graph/__pycache__/
 backend/app/tools/__pycache__/
 backend/app/rag/__pycache__/
 backend/app/core/__pycache__/
+
+
+.agent/
+
+# Testing
+frontend/playwright-report/
+frontend/test-results/
+
+# Data
+backend/data/*.json
+!backend/data/.keep
