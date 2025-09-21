@@ -58,7 +58,7 @@ class IngestionPipeline:
             {
                 **(metadata or {}), 
                 "text": chunk, 
-                "source": os.path.basename(file_path),
+                "source": (metadata or {}).get("filename") or os.path.basename(file_path),
                 "extension": ext
             }
             for chunk in all_chunks

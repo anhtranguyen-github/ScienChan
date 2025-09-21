@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, List
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from backend.app.graph.state import AgentState
@@ -6,6 +7,9 @@ from backend.app.rag.rag_service import rag_service
 from backend.app.tools.registry import get_tools
 from backend.app.core.llm_provider import get_llm
 
+# Initialize Logger
+logger = logging.getLogger(__name__)
+
 # Initialize LLM via provider factory
 llm = get_llm()
 llm_with_tools = llm.bind_tools(get_tools())
@@ -13,6 +17,7 @@ llm_with_tools = llm.bind_tools(get_tools())
 async def retrieval_node(state: AgentState) -> Dict:
     """Retrieve relevant context using Hybrid Search (Vector + Keyword)."""
     last_message = state["messages"][-1].content
+    logger.info(f"Retrieving context for query: {last_message[:50]}...")
     query_vector = await rag_service.get_query_embedding(last_message)
     
     # Use Hybrid Search for better recall
@@ -23,6 +28,7 @@ async def retrieval_node(state: AgentState) -> Dict:
         limit=5
     )
     context = [res["payload"]["text"] for res in results]
+    logger.info(f"Retrieved {len(context)} context chunks")
     
     return {
         "context": context,
@@ -42,8 +48,16 @@ async def reason_node(state: AgentState, config: RunnableConfig) -> Dict:
         "\n\nContext: " + "\n---\n".join(state.get("context", []))
     ))
     
+    logger.info("Starting reasoning step...")
     messages = [system_prompt] + state["messages"]
     response = await llm_with_tools.ainvoke(messages, config=config)
+    
+    if response.tool_calls:
+        logger.info(f"Model decided to call tools: {len(response.tool_calls)} calls generated")
+        for tc in response.tool_calls:
+            logger.info(f"Tool call: {tc['name']}")
+    else:
+        logger.info("Model generated direct response")
     
     return {
         "messages": [response],

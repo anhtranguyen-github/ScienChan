@@ -39,6 +39,7 @@ export function KnowledgeBase() {
 
         const formData = new FormData();
         formData.append('file', file);
+        console.log("Uploading file:", file.name);
 
         try {
             const res = await fetch('http://localhost:8000/upload', {
@@ -59,6 +60,7 @@ export function KnowledgeBase() {
     };
 
     const handleDelete = async (name: string) => {
+        console.log("Deleting document:", name);
         try {
             const res = await fetch(`http://localhost:8000/documents/${name}`, {
                 method: 'DELETE',
@@ -106,6 +108,7 @@ export function KnowledgeBase() {
                     documents.map((doc) => (
                         <div
                             key={doc.name}
+                            data-testid={`doc-item-${doc.name}`}
                             className="group flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-indigo-500/30 transition-all hover:bg-white/10"
                         >
                             <div className="flex items-center gap-3 overflow-hidden">
@@ -119,6 +122,7 @@ export function KnowledgeBase() {
                             </div>
                             <button
                                 onClick={() => handleDelete(doc.name)}
+                                data-testid={`delete-doc-${doc.name}`}
                                 className="p-2 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
                             >
                                 <Trash2 className="w-4 h-4" />
