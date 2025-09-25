@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useChat } from '@/hooks/use-chat';
+import { useChat, Message } from '@/hooks/use-chat';
 import { cn } from '@/lib/utils';
-import { Send, Bot, User, Trash2, Cpu, Loader2, Wrench } from 'lucide-react';
+import { Send, Cpu, Loader2, Wrench, Bot, Trash2, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { KnowledgeBase } from '@/components/knowledge-base';
 import { ToolsManager } from '@/components/tools-manager';
+import { ChatMessage } from '@/components/chat-message';
+import { SourceViewer } from '@/components/source-viewer';
 
 export default function ChatPage() {
   const { messages, isLoading, sendMessage, clearChat } = useChat();
   const [input, setInput] = useState('');
   const [showTools, setShowTools] = useState(false);
+  const [activeSource, setActiveSource] = useState<{ id: number; name: string; content: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -106,56 +109,15 @@ export default function ChatPage() {
             )}
 
             {messages.map((message) => (
-              <motion.div
+              <ChatMessage
                 key={message.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={cn(
-                  "flex items-start gap-5 max-w-4xl mx-auto",
-                  message.role === 'user' ? "flex-row-reverse" : ""
-                )}
-              >
-                <div className={cn(
-                  "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg",
-                  message.role === 'user' ? "bg-purple-600 shadow-purple-500/20" : "bg-[#1e1e21] border border-white/10 shadow-black/40"
-                )}>
-                  {message.role === 'user' ? <User size={20} /> : <Bot size={20} className="text-blue-500" />}
-                </div>
-
-                <div className="flex flex-col gap-3 min-w-0 flex-1">
-                  {message.role === 'assistant' && (message.reasoning_steps?.length || message.tools?.length) && (
-                    <div className="flex flex-wrap gap-2 mb-1">
-                      {message.tools?.map((tool, idx) => (
-                        <span key={idx} className="text-[11px] font-bold px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-sm">
-                          {tool}
-                        </span>
-                      ))}
-                      {(message.reasoning_steps?.length || 0) > 0 && (
-                        <div className="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/5 text-[12px] text-gray-400 font-medium">
-                          <span className="text-indigo-400 font-bold block mb-1 uppercase tracking-tighter">Thinking Process:</span>
-                          <ul className="space-y-1">
-                            {message.reasoning_steps?.map((step, idx) => (
-                              <li key={idx} className="flex gap-2">
-                                <span className="text-indigo-500 opacity-50">•</span>
-                                {step}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className={cn(
-                    "p-6 rounded-3xl leading-relaxed text-[15px] shadow-sm whitespace-pre-wrap",
-                    message.role === 'user'
-                      ? "bg-[#1e1e21] border border-purple-500/20 text-gray-100 rounded-tr-none"
-                      : "bg-[#161619] border border-white/5 text-gray-200 rounded-tl-none"
-                  )}>
-                    {message.content || (isLoading && message.id === messages[messages.length - 1].id ? "..." : "")}
-                  </div>
-                </div>
-              </motion.div>
+                message={message}
+                isLoading={isLoading && message.id === messages[messages.length - 1].id}
+                onCitationClick={(id) => {
+                  const source = message.sources?.find(s => s.id === id);
+                  if (source) setActiveSource(source);
+                }}
+              />
             ))}
 
             {isLoading && (
@@ -207,6 +169,7 @@ export default function ChatPage() {
       </main>
       <AnimatePresence>
         {showTools && <ToolsManager onClose={() => setShowTools(false)} />}
+        {activeSource && <SourceViewer source={activeSource} onClose={() => setActiveSource(null)} />}
       </AnimatePresence>
     </div>
   );

@@ -97,8 +97,11 @@ async def stream_graph_updates(message: str, thread_id: str = "default") -> Asyn
         # Capture reasoning steps when nodes finish
         if kind == "on_chain_end" and name in ["retrieve", "reason", "generate"]:
             output = event["data"].get("output", {})
-            if isinstance(output, dict) and "reasoning_steps" in output:
-                yield f"data: {json.dumps({'type': 'reasoning', 'steps': output['reasoning_steps']})}\n\n"
+            if isinstance(output, dict):
+                if "reasoning_steps" in output:
+                    yield f"data: {json.dumps({'type': 'reasoning', 'steps': output['reasoning_steps']})}\n\n"
+                if "sources" in output:
+                    yield f"data: {json.dumps({'type': 'sources', 'sources': output['sources']})}\n\n"
         
         if kind == "on_chat_model_stream":
             content = event["data"]["chunk"].content

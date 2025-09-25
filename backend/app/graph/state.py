@@ -20,3 +20,6 @@ class AgentState(TypedDict):
     
     # Token usage or metadata
     metadata: dict
+    
+    # Structured sources for citations
+    sources: List[dict]
