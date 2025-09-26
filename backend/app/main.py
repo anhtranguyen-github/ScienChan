@@ -14,6 +14,7 @@ from backend.app.graph.builder import app as graph_app
 from backend.app.rag.ingestion import ingestion_pipeline
 from backend.app.rag.qdrant_provider import qdrant
 from backend.app.routers.tools import router as tools_router
+from backend.app.routers.settings import router as settings_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +37,7 @@ async def root():
     return {"message": "LangGraph Chatbot API is running"}
 
 app.include_router(tools_router)
+app.include_router(settings_router)
 
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):

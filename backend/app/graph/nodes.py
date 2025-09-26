@@ -14,18 +14,23 @@ logger = logging.getLogger(__name__)
 llm = get_llm()
 llm_with_tools = llm.bind_tools(get_tools())
 
+from backend.app.core.settings_manager import settings_manager
+
 async def retrieval_node(state: AgentState) -> Dict:
-    """Retrieve relevant context using Hybrid Search (Vector + Keyword)."""
+    """Retrieve relevant context based on configured settings."""
+    settings = settings_manager.get_settings()
     last_message = state["messages"][-1].content
-    logger.info(f"Retrieving context for query: {last_message[:50]}...")
+    logger.info(f"Retrieving context ({settings.retrieval_mode}) for query: {last_message[:50]}...")
     query_vector = await rag_service.get_query_embedding(last_message)
     
-    # Use Hybrid Search for better recall
+    # Use Search Strategy from settings
     results = await qdrant.hybrid_search(
         collection_name="knowledge_base", 
         query_vector=query_vector, 
         query_text=last_message,
-        limit=5
+        limit=settings.search_limit,
+        mode=settings.retrieval_mode,
+        alpha=settings.hybrid_alpha
     )
     
     context = []

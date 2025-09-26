@@ -3,10 +3,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChat, Message } from '@/hooks/use-chat';
 import { cn } from '@/lib/utils';
-import { Send, Cpu, Loader2, Wrench, Bot, Trash2, User } from 'lucide-react';
+import { Send, Cpu, Loader2, Wrench, Bot, Trash2, User, Settings as SettingsIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { KnowledgeBase } from '@/components/knowledge-base';
 import { ToolsManager } from '@/components/tools-manager';
+import { SettingsManager } from '@/components/settings-manager';
 import { ChatMessage } from '@/components/chat-message';
 import { SourceViewer } from '@/components/source-viewer';
 
@@ -14,6 +15,7 @@ export default function ChatPage() {
   const { messages, isLoading, sendMessage, clearChat } = useChat();
   const [input, setInput] = useState('');
   const [showTools, setShowTools] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [activeSource, setActiveSource] = useState<{ id: number; name: string; content: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -55,6 +57,14 @@ export default function ChatPage() {
         >
           <Wrench size={18} className="text-gray-400 group-hover:text-white" />
           <span className="text-sm font-medium">Manage Tools</span>
+        </button>
+
+        <button
+          onClick={() => setShowSettings(true)}
+          className="flex items-center gap-3 w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group shrink-0"
+        >
+          <SettingsIcon size={18} className="text-gray-400 group-hover:text-white" />
+          <span className="text-sm font-medium">Global Settings</span>
         </button>
 
         <div className="flex-1 overflow-hidden min-h-0">
@@ -169,6 +179,7 @@ export default function ChatPage() {
       </main>
       <AnimatePresence>
         {showTools && <ToolsManager onClose={() => setShowTools(false)} />}
+        {showSettings && <SettingsManager onClose={() => setShowSettings(false)} />}
         {activeSource && <SourceViewer source={activeSource} onClose={() => setActiveSource(null)} />}
       </AnimatePresence>
     </div>
