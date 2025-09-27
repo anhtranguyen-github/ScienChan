@@ -57,3 +57,4 @@ frontend/test-results/
 # Data
 backend/data/*.json
 !backend/data/.keep
+mongo_data/
