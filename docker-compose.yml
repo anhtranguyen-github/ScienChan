@@ -10,6 +10,13 @@ services:
       - ./qdrant_storage:/qdrant/storage
     restart: always
 
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo_data:/data/db
+    restart: always
   # Optional: For local LLM testing if needed
   # ollama:
   #   image: ollama/ollama:latest
