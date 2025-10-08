@@ -36,8 +36,10 @@ workflow.add_conditional_edges(
 workflow.add_edge("tools", "reason")
 workflow.add_edge("generate", END)
 
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.mongodb import MongoDBSaver
+from backend.app.core.config import ai_settings
+from backend.app.core.mongodb import mongodb_manager
 
 # 4. Compile with Persistence
-checkpointer = MemorySaver()
+checkpointer = MongoDBSaver(mongodb_manager.client, db_name=ai_settings.MONGO_DB)
 app = workflow.compile(checkpointer=checkpointer)

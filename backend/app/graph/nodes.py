@@ -50,7 +50,7 @@ async def retrieval_node(state: AgentState) -> Dict:
     return {
         "context": context,
         "sources": sources,
-        "reasoning_steps": state.get("reasoning_steps", []) + ["Retrieved context from knowledge base"]
+        "reasoning_steps": ["Retrieved context from knowledge base"]
     }
 
 from langchain_core.runnables import RunnableConfig
@@ -79,6 +79,11 @@ async def reason_node(state: AgentState, config: RunnableConfig) -> Dict:
     messages = [system_prompt] + state["messages"]
     response = await llm_with_tools.ainvoke(messages, config=config)
     
+    # Attach reasoning data to the message for history persistence
+    current_steps = state.get("reasoning_steps", []) + ["Reasoning about the query and context"]
+    response.additional_kwargs["reasoning_steps"] = current_steps
+    response.additional_kwargs["sources"] = state.get("sources", [])
+    
     logger.info(f"LLM Response: {response.content[:200]}...")
     
     if response.tool_calls:
@@ -90,12 +95,30 @@ async def reason_node(state: AgentState, config: RunnableConfig) -> Dict:
     
     return {
         "messages": [response],
-        "reasoning_steps": state.get("reasoning_steps", []) + ["Reasoning about the query and context"]
+        "reasoning_steps": current_steps
     }
 
 async def generate_node(state: AgentState) -> Dict:
     """Synthesize the final answer."""
-    # This node is reached when no more tools are needed
+    final_steps = state.get("reasoning_steps", []) + ["Synthesizing final response"]
+    
+    # Update the last assistant message with the final reasoning steps
+    last_msg = state["messages"][-1]
+    if isinstance(last_msg, AIMessage):
+        # We create a new message object with the same ID to update the metadata
+        updated_msg = AIMessage(
+            content=last_msg.content,
+            id=getattr(last_msg, "id", None),
+            additional_kwargs={
+                **last_msg.additional_kwargs,
+                "reasoning_steps": final_steps
+            }
+        )
+        return {
+            "messages": [updated_msg],
+            "reasoning_steps": final_steps
+        }
+        
     return {
-        "reasoning_steps": state.get("reasoning_steps", []) + ["Synthesizing final response"]
+        "reasoning_steps": final_steps
     }

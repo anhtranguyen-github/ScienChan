@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
+import { API_ROUTES } from '@/lib/api-config';
 
 export interface Message {
     id: string;
@@ -24,6 +25,24 @@ export function useChat() {
     });
     const [isLoading, setIsLoading] = useState(false);
 
+    const fetchHistory = useCallback(async (id: string) => {
+        try {
+            const res = await fetch(API_ROUTES.CHAT_HISTORY(id));
+            if (res.ok) {
+                const data = await res.json();
+                setMessages(data.messages);
+            }
+        } catch (err) {
+            console.error('Failed to fetch chat history:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (threadId) {
+            fetchHistory(threadId);
+        }
+    }, [threadId, fetchHistory]);
+
     const clearChat = useCallback(() => {
         setMessages([]);
         const newId = Math.random().toString(36).substring(7);
@@ -45,7 +64,7 @@ export function useChat() {
         let accumulatedContent = '';
 
         try {
-            await fetchEventSource('http://localhost:8000/chat/stream', {
+            await fetchEventSource(API_ROUTES.CHAT_STREAM, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -143,5 +162,5 @@ export function useChat() {
         }
     }, [threadId]);
 
-    return { messages, isLoading, sendMessage, clearChat };
+    return { messages, isLoading, sendMessage, clearChat, threadId, setThreadId };
 }
