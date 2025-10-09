@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Trash2, CheckCircle, Loader2 } from 'lucide-react';
+import { Upload, FileText, Trash2, CheckCircle, Loader2, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import { API_ROUTES } from '@/lib/api-config';
+import { SourceViewer } from '@/components/source-viewer';
+import { AnimatePresence } from 'framer-motion';
 
 interface Document {
     name: string;
@@ -13,10 +17,12 @@ export function KnowledgeBase() {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [activeSource, setActiveSource] = useState<{ id: number; name: string; content: string } | null>(null);
+    const [isViewing, setIsViewing] = useState(false);
 
     const fetchDocuments = async () => {
         try {
-            const res = await fetch('http://localhost:8000/documents');
+            const res = await fetch(API_ROUTES.DOCUMENTS);
             if (res.ok) {
                 const data = await res.json();
                 setDocuments(data);
@@ -42,7 +48,7 @@ export function KnowledgeBase() {
         console.log("Uploading file:", file.name);
 
         try {
-            const res = await fetch('http://localhost:8000/upload', {
+            const res = await fetch(API_ROUTES.UPLOAD, {
                 method: 'POST',
                 body: formData,
             });
@@ -62,7 +68,7 @@ export function KnowledgeBase() {
     const handleDelete = async (name: string) => {
         console.log("Deleting document:", name);
         try {
-            const res = await fetch(`http://localhost:8000/documents/${name}`, {
+            const res = await fetch(API_ROUTES.DOCUMENT_DELETE(name), {
                 method: 'DELETE',
             });
             if (res.ok) {
@@ -73,17 +79,46 @@ export function KnowledgeBase() {
         }
     };
 
+    const handleView = async (name: string) => {
+        setIsViewing(true);
+        try {
+            const res = await fetch(API_ROUTES.DOCUMENT_GET(name));
+            if (res.ok) {
+                const data = await res.json();
+                setActiveSource({
+                    id: 0,
+                    name: data.name,
+                    content: data.content
+                });
+            }
+        } catch (err) {
+            console.error('Failed to view document', err);
+        } finally {
+            setIsViewing(false);
+        }
+    };
+
     return (
         <div className="flex flex-col gap-4 p-4 glass-panel rounded-2xl h-full border border-white/10 overflow-hidden">
-            <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-indigo-400" />
-                    Knowledge Base
-                </h3>
-                <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-xl transition-all shadow-lg hover:shadow-indigo-500/20 active:scale-95">
-                    <Upload className="w-5 h-5" />
-                    <input type="file" className="hidden" onChange={handleUpload} disabled={isUploading} />
-                </label>
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-indigo-400" />
+                        Knowledge Base
+                    </h3>
+                    <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white p-2 rounded-xl transition-all border border-white/5 active:scale-95 transition-all">
+                        <Upload className="w-4 h-4" />
+                        <input type="file" className="hidden" onChange={handleUpload} disabled={isUploading} />
+                    </label>
+                </div>
+
+                <Link
+                    href="/knowledge"
+                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[11px] font-bold uppercase tracking-widest border border-indigo-500/20 transition-all group"
+                >
+                    <ExternalLink size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    Manage Full Access
+                </Link>
             </div>
 
             {isUploading && (
@@ -120,13 +155,26 @@ export function KnowledgeBase() {
                                     <span className="text-[10px] text-gray-500 uppercase tracking-wider">{doc.chunks} fragments</span>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => handleDelete(doc.name)}
-                                data-testid={`delete-doc-${doc.name}`}
-                                className="p-2 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => handleView(doc.name)}
+                                    className="p-2 text-gray-500 hover:text-indigo-400 transition-colors opacity-0 group-hover:opacity-100"
+                                    disabled={isViewing}
+                                >
+                                    {isViewing && activeSource?.name === doc.name ? (
+                                        <Loader2 size={14} className="animate-spin" />
+                                    ) : (
+                                        <FileText size={14} />
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(doc.name)}
+                                    data-testid={`delete-doc-${doc.name}`}
+                                    className="p-2 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
                     ))
                 )}
@@ -138,6 +186,14 @@ export function KnowledgeBase() {
                     Hybrid Search Active
                 </div>
             </div>
+            <AnimatePresence>
+                {activeSource && (
+                    <SourceViewer
+                        source={activeSource}
+                        onClose={() => setActiveSource(null)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

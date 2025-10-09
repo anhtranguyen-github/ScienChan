@@ -59,9 +59,10 @@ class IngestionPipeline:
                 **(metadata or {}), 
                 "text": chunk, 
                 "source": (metadata or {}).get("filename") or os.path.basename(file_path),
-                "extension": ext
+                "extension": ext,
+                "index": i
             }
-            for chunk in all_chunks
+            for i, chunk in enumerate(all_chunks)
         ]
         
         # Store in Qdrant
