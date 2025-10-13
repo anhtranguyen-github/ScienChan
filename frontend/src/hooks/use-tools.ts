@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { API_ROUTES } from '@/lib/api-config';
 
 export interface ToolDefinition {
     id: string;
@@ -17,7 +18,7 @@ export function useTools() {
     const fetchTools = useCallback(async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/tools/');
+            const res = await fetch(API_ROUTES.TOOLS);
             if (res.ok) {
                 const data = await res.json();
                 setTools(data);
@@ -33,7 +34,7 @@ export function useTools() {
 
     const toggleTool = useCallback(async (id: string, enabled: boolean) => {
         try {
-            const res = await fetch(`http://localhost:8000/tools/${id}/toggle?enabled=${enabled}`, {
+            const res = await fetch(`${API_ROUTES.TOOL_TOGGLE(id)}?enabled=${enabled}`, {
                 method: 'POST',
             });
             if (res.ok) {
@@ -46,7 +47,7 @@ export function useTools() {
 
     const addTool = useCallback(async (tool: ToolDefinition) => {
         try {
-            const res = await fetch('http://localhost:8000/tools/', {
+            const res = await fetch(API_ROUTES.TOOLS, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(tool),
@@ -64,7 +65,7 @@ export function useTools() {
 
     const deleteTool = useCallback(async (id: string) => {
         try {
-            const res = await fetch(`http://localhost:8000/tools/${id}`, {
+            const res = await fetch(`${API_ROUTES.TOOLS}${id}`, {
                 method: 'DELETE',
             });
             if (res.ok) {
