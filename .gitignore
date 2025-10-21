@@ -62,4 +62,6 @@ backend/data/*.json
 docs/
 plans/
 scripts/
+test-resources/
+TESTING_CONSTRAINTS_AND_BUGS.md
 mongo_data/
