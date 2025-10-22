@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, List
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, RemoveMessage
 from backend.app.graph.state import AgentState
 from backend.app.rag.qdrant_provider import qdrant
 from backend.app.rag.rag_service import rag_service
@@ -63,8 +63,11 @@ async def reason_node(state: AgentState, config: RunnableConfig) -> Dict:
     
     logger.info(f"Context string for reasoning: {context_str[:200]}...")
 
+    summary = state.get("summary", "")
+    summary_context = f"\n\n--- PREVIOUS CONVERSATION SUMMARY ---\n{summary}" if summary else ""
+
     system_prompt = SystemMessage(content=(
-        "You are an advanced reasoning assistant. Use the provided context to answer the user's question. "
+        "You are an advanced reasoning assistant. Use the provided context and conversation summary to answer the user's question. "
         "If you need more information, you can use the available tools. "
         "\n\n--- CITATION RULES ---\n"
         "You MUST cite your sources using numeric brackets like [1], [2], etc., corresponding to the context blocks. "
@@ -72,6 +75,7 @@ async def reason_node(state: AgentState, config: RunnableConfig) -> Dict:
         "If multiple sources support a point, use [1][2]. "
         "\n\n--- REASONING OPTIMIZATION (NOWAIT) ---\n"
         "Be direct and efficient in your reasoning. Avoid unnecessary self-reflection tokens. "
+        + summary_context +
         "\n\n--- CONTEXT ---\n" + context_str
     ))
     
@@ -121,4 +125,48 @@ async def generate_node(state: AgentState) -> Dict:
         
     return {
         "reasoning_steps": final_steps
+    }
+
+async def summarize_node(state: AgentState) -> Dict:
+    """Summarize the conversation history if it gets too long."""
+    # Only summarize if we have more than a certain number of messages
+    # We keep the last few messages for immediate context
+    messages = state["messages"]
+    if len(messages) <= 6:
+        return {}
+        
+    logger.info(f"Summarizing conversation history ({len(messages)} messages)...")
+    
+    existing_summary = state.get("summary", "")
+    if existing_summary:
+        summary_prompt = (
+            f"This is a summary of the conversation history so far: {existing_summary}\n\n"
+            "Extend the summary by adding the new messages below. "
+            "IMPORTANT: Preserve all specific facts, numbers, and user-provided details concisely."
+        )
+    else:
+        summary_prompt = (
+            "Summarize the following conversation history concisely. "
+            "IMPORTANT: You MUST preserve all specific facts, numbers, and key details provided by the user."
+        )
+        
+    # Get all messages except the last 2 (usually the current Q&A pair)
+    messages_to_summarize = messages[:-2]
+    
+    response = await llm.ainvoke(
+        [SystemMessage(content=summary_prompt)] + messages_to_summarize
+    )
+    
+    new_summary = response.content
+    
+    # Create RemoveMessage instructions for the summarized messages
+    # We remove everything except the last 2 messages
+    delete_messages = [RemoveMessage(id=m.id) for m in messages_to_summarize if hasattr(m, "id")]
+    
+    deleted_ids = [m.id for m in delete_messages]
+    logger.info(f"Summarization complete. Removing {len(delete_messages)} messages: {deleted_ids}")
+    
+    return {
+        "summary": new_summary,
+        "messages": delete_messages
     }

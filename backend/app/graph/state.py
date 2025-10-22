@@ -6,6 +6,9 @@ class AgentState(TypedDict):
     # The messages in the conversation
     messages: Annotated[List[BaseMessage], add_messages]
     
+    # Summary of the conversation history
+    summary: str
+    
     # Retrieved context from RAG
     context: List[str]
     
