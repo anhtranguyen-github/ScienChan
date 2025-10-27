@@ -21,3 +21,4 @@ sentence-transformers
 voyageai
 motor
 langgraph-checkpoint-mongodb
+arxiv

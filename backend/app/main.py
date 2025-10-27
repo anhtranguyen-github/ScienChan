@@ -160,10 +160,39 @@ async def list_chat_threads():
     
     return {"threads": threads}
 
+@app.patch("/chat/threads/{thread_id}/title")
+async def update_thread_title(thread_id: str, request: Request):
+    """Update the title of a specific thread."""
+    from backend.app.core.mongodb import mongodb_manager
+    data = await request.json()
+    title = data.get("title")
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+        
+    db = mongodb_manager.get_async_database()
+    col = db["thread_metadata"]
+    await col.update_one(
+        {"thread_id": thread_id},
+        {"$set": {"title": title}},
+        upsert=True
+    )
+    return {"status": "success", "title": title}
+
+@app.delete("/chat/threads/{thread_id}")
+async def delete_thread(thread_id: str):
+    """Delete a thread and its history."""
+    from backend.app.core.mongodb import mongodb_manager
+    db = mongodb_manager.get_async_database()
+    
+    # Delete from checkpoints and thread_metadata
+    await db["checkpoints"].delete_many({"thread_id": thread_id})
+    await db["thread_metadata"].delete_one({"thread_id": thread_id})
+    
+    return {"status": "success", "message": f"Thread {thread_id} deleted"}
+
 async def generate_thread_title(message: str, thread_id: str):
     """Generate a short title for the thread based on the first message."""
-    from langchain_openai import ChatOpenAI
-    from backend.app.core.config import ai_settings
+    from backend.app.core.llm_provider import get_llm
     from backend.app.core.mongodb import mongodb_manager
     
     try:
@@ -174,7 +203,7 @@ async def generate_thread_title(message: str, thread_id: str):
         if exists:
             return
             
-        llm = ChatOpenAI(model=ai_settings.LLM_MODEL)
+        llm = get_llm()
         prompt = f"Summarize the following user message into a very short (2-4 words) catchy title. Message: {message}\nTitle:"
         response = await llm.ainvoke(prompt)
         title = response.content.strip().strip('"')
