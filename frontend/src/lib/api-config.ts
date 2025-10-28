@@ -12,6 +12,8 @@ export const API_ROUTES = {
     CHAT_STREAM: `${API_BASE_URL}/chat/stream`,
     CHAT_HISTORY: (threadId: string) => `${API_BASE_URL}/chat/history/${threadId}`,
     CHAT_THREADS: `${API_BASE_URL}/chat/threads`,
+    THREAD_TITLE: (threadId: string) => `${API_BASE_URL}/chat/threads/${threadId}/title`,
+    THREAD_DELETE: (threadId: string) => `${API_BASE_URL}/chat/threads/${threadId}`,
     DOCUMENTS: `${API_BASE_URL}/documents`,
     DOCUMENT_GET: (name: string) => `${API_BASE_URL}/documents/${name}`,
     DOCUMENT_DELETE: (name: string) => `${API_BASE_URL}/documents/${name}`,

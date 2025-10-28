@@ -26,9 +26,43 @@ export function useThreads() {
         }
     }, []);
 
+    const updateThreadTitle = async (id: string, title: string) => {
+        try {
+            const res = await fetch(API_ROUTES.THREAD_TITLE(id), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title })
+            });
+            if (res.ok) {
+                await fetchThreads();
+            }
+        } catch (err) {
+            console.error('Failed to update thread title:', err);
+        }
+    };
+
+    const deleteThread = async (id: string) => {
+        try {
+            const res = await fetch(API_ROUTES.THREAD_DELETE(id), {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                await fetchThreads();
+            }
+        } catch (err) {
+            console.error('Failed to delete thread:', err);
+        }
+    };
+
     useEffect(() => {
         fetchThreads();
     }, [fetchThreads]);
 
-    return { threads, isLoading, refreshThreads: fetchThreads };
+    return {
+        threads,
+        isLoading,
+        refreshThreads: fetchThreads,
+        updateThreadTitle,
+        deleteThread
+    };
 }

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import {
   Send, Cpu, Loader2, Wrench, Bot, Trash2, User,
   Settings as SettingsIcon, Lightbulb, LightbulbOff,
-  Plus, ChevronDown, ChevronRight, MessageSquare, Database
+  Plus, ChevronDown, ChevronRight, MessageSquare, Database, Edit3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { KnowledgeBase } from '@/components/knowledge-base';
@@ -19,7 +19,7 @@ import { SourceViewer } from '@/components/source-viewer';
 
 export default function ChatPage() {
   const { messages, isLoading, sendMessage, clearChat, threadId, setThreadId } = useChat();
-  const { threads, refreshThreads } = useThreads();
+  const { threads, refreshThreads, updateThreadTitle, deleteThread } = useThreads();
   const { settings, updateSettings } = useSettings();
   const [input, setInput] = useState('');
   const [showTools, setShowTools] = useState(false);
@@ -131,22 +131,55 @@ export default function ChatPage() {
                     <div className="px-4 py-3 text-[11px] text-gray-600 italic">No recent conversations</div>
                   ) : (
                     threads.map((thread) => (
-                      <button
+                      <div
                         key={thread.id}
-                        onClick={() => selectThread(thread.id)}
                         className={cn(
-                          "flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all group text-left",
+                          "flex items-center gap-1 w-full rounded-xl transition-all group",
                           threadId === thread.id
                             ? "bg-white/10 text-white border border-white/10"
                             : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
                         )}
                       >
-                        <MessageSquare size={14} className={cn(threadId === thread.id ? "text-blue-400" : "text-gray-600 group-hover:text-gray-400")} />
-                        <span className="text-xs font-medium truncate flex-1">{thread.title}</span>
-                        {thread.has_thinking && (
-                          <Lightbulb size={12} className="text-yellow-500/50 group-hover:text-yellow-500 transition-colors" />
-                        )}
-                      </button>
+                        <button
+                          onClick={() => selectThread(thread.id)}
+                          className="flex items-center gap-3 flex-1 px-4 py-3 text-left overflow-hidden"
+                        >
+                          <MessageSquare size={14} className={cn(threadId === thread.id ? "text-blue-400" : "text-gray-600 group-hover:text-gray-400")} />
+                          <span className="text-xs font-medium truncate flex-1">{thread.title}</span>
+                          {thread.has_thinking && (
+                            <Lightbulb size={12} className="text-yellow-500/50 group-hover:text-yellow-500 transition-colors" />
+                          )}
+                        </button>
+
+                        <div className="flex items-center gap-1 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newTitle = prompt('New title:', thread.title);
+                              if (newTitle && newTitle !== thread.title) {
+                                updateThreadTitle(thread.id, newTitle);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-colors"
+                            title="Rename"
+                          >
+                            <Edit3 size={12} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Delete this chat?')) {
+                                deleteThread(thread.id);
+                                if (threadId === thread.id) handleNewChat();
+                              }
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-red-400 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
                     ))
                   )}
                 </motion.div>
