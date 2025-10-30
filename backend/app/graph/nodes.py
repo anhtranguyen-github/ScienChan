@@ -23,6 +23,8 @@ async def retrieval_node(state: AgentState) -> Dict:
     logger.info(f"Retrieving context ({settings.retrieval_mode}) for query: {last_message[:50]}...")
     query_vector = await rag_service.get_query_embedding(last_message)
     
+    workspace_id = state.get("workspace_id", "default")
+    
     # Use Search Strategy from settings
     results = await qdrant.hybrid_search(
         collection_name="knowledge_base", 
@@ -30,7 +32,8 @@ async def retrieval_node(state: AgentState) -> Dict:
         query_text=last_message,
         limit=settings.search_limit,
         mode=settings.retrieval_mode,
-        alpha=settings.hybrid_alpha
+        alpha=settings.hybrid_alpha,
+        workspace_id=workspace_id
     )
     
     context = []

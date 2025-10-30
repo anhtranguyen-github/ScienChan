@@ -11,7 +11,7 @@ interface ChatMessageProps {
     showReasoning?: boolean;
 }
 
-export function ChatMessage({ message, isLoading, onCitationClick, showReasoning = true }: ChatMessageProps) {
+export function ChatMessage({ message, isLoading, onCitationClick }: ChatMessageProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const renderContent = (content: string) => {
@@ -54,7 +54,7 @@ export function ChatMessage({ message, isLoading, onCitationClick, showReasoning
             </div>
 
             <div className="flex flex-col gap-3 min-w-0 flex-1">
-                {message.role === 'assistant' && (message.reasoning_steps?.length || message.tools?.length) && showReasoning && (
+                {message.role === 'assistant' && (message.reasoning_steps?.length || message.tools?.length) && (
                     <div className="flex flex-col gap-2 mb-1">
                         <div className="flex flex-wrap gap-2">
                             {message.tools?.map((tool, idx) => (

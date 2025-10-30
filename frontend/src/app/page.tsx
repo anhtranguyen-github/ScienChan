@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useChat, Message } from '@/hooks/use-chat';
 import { useSettings } from '@/hooks/use-settings';
 import { useThreads } from '@/hooks/use-threads';
+import { useWorkspaces } from '@/hooks/use-workspaces';
 import { cn } from '@/lib/utils';
 import {
   Send, Cpu, Loader2, Wrench, Bot, Trash2, User,
@@ -16,10 +17,14 @@ import { ToolsManager } from '@/components/tools-manager';
 import { SettingsManager } from '@/components/settings-manager';
 import { ChatMessage } from '@/components/chat-message';
 import { SourceViewer } from '@/components/source-viewer';
+import { WorkspaceSwitcher } from '@/components/workspace-switcher';
 
 export default function ChatPage() {
-  const { messages, isLoading, sendMessage, clearChat, threadId, setThreadId } = useChat();
-  const { threads, refreshThreads, updateThreadTitle, deleteThread } = useThreads();
+  const { workspaces, currentWorkspace, selectWorkspace, createWorkspace } = useWorkspaces();
+  const workspaceId = currentWorkspace?.id || 'default';
+
+  const { messages, isLoading, sendMessage, clearChat, threadId, setThreadId } = useChat(workspaceId);
+  const { threads, refreshThreads, updateThreadTitle, deleteThread } = useThreads(workspaceId);
   const { settings, updateSettings } = useSettings();
   const [input, setInput] = useState('');
   const [showTools, setShowTools] = useState(false);
@@ -90,6 +95,15 @@ export default function ChatPage() {
               <Cpu size={22} className="text-white" />
             </div>
             <span className="text-lg font-bold tracking-tight">AI Architect</span>
+          </div>
+
+          <div className="mb-4">
+            <WorkspaceSwitcher
+              workspaces={workspaces}
+              currentWorkspace={currentWorkspace}
+              onSelect={selectWorkspace}
+              onCreate={createWorkspace}
+            />
           </div>
 
           <button
@@ -213,7 +227,7 @@ export default function ChatPage() {
                   exit={{ opacity: 0 }}
                   className="flex-1 min-h-0 mt-2 overflow-hidden"
                 >
-                  <KnowledgeBase />
+                  <KnowledgeBase workspaceId={workspaceId} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -269,23 +283,18 @@ export default function ChatPage() {
             <button
               onClick={toggleThinkingMode}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all active:scale-95 text-xs font-bold uppercase tracking-wider",
+                "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all active:scale-95 text-[10px] font-bold uppercase tracking-wider",
                 settings?.show_reasoning
-                  ? "bg-blue-500/10 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]"
+                  ? "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)]"
                   : "bg-white/5 border-white/10 text-gray-500"
               )}
+              title={settings?.show_reasoning ? "AI is in Deep Reasoning mode" : "AI is in Fast response mode"}
             >
-              {settings?.show_reasoning ? (
-                <>
-                  <Lightbulb size={14} className="animate-pulse" />
-                  <span>Thinking ON</span>
-                </>
-              ) : (
-                <>
-                  <LightbulbOff size={14} />
-                  <span>Thinking OFF</span>
-                </>
-              )}
+              <div className={cn(
+                "w-1.5 h-1.5 rounded-full",
+                settings?.show_reasoning ? "bg-amber-500 animate-pulse" : "bg-gray-600"
+              )} />
+              <span>{settings?.show_reasoning ? "Reasoning: Active" : "Reasoning: Off"}</span>
             </button>
           </div>
         </header>

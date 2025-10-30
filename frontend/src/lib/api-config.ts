@@ -21,4 +21,8 @@ export const API_ROUTES = {
     SETTINGS: `${API_BASE_URL}/settings/`,
     TOOLS: `${API_BASE_URL}/tools/`,
     TOOL_TOGGLE: (id: string) => `${API_BASE_URL}/tools/${id}/toggle`,
+    WORKSPACES: `${API_BASE_URL}/workspaces`,
+    WORKSPACE_DETAIL: (id: string) => `${API_BASE_URL}/workspaces/${id}`,
+    WORKSPACE_STATS: (id: string) => `${API_BASE_URL}/workspaces/${id}/details`,
+    WORKSPACE_SHARE: (id: string) => `${API_BASE_URL}/workspaces/${id}/share-document`,
 };

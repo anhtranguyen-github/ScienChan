@@ -15,6 +15,7 @@ from backend.app.rag.ingestion import ingestion_pipeline
 from backend.app.rag.qdrant_provider import qdrant
 from backend.app.routers.tools import router as tools_router
 from backend.app.routers.settings import router as settings_router
+from backend.app.routers.workspaces import router as workspace_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -38,9 +39,10 @@ async def root():
 
 app.include_router(tools_router)
 app.include_router(settings_router)
+app.include_router(workspace_router)
 
 @app.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(file: UploadFile = File(...), workspace_id: str = "default"):
     """
     Upload and process a document into the knowledge base.
     Supports PDF, TXT, MD, and DOCX.
@@ -58,7 +60,7 @@ async def upload_document(file: UploadFile = File(...)):
         logger.info(f"Starting processing for file: {file.filename}")
         num_chunks = await ingestion_pipeline.process_file(
             tmp_path, 
-            metadata={"filename": file.filename}
+            metadata={"filename": file.filename, "workspace_id": workspace_id}
         )
         logger.info(f"Successfully processed {num_chunks} chunks for file: {file.filename}")
         
@@ -75,10 +77,10 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/documents")
-async def list_documents():
+async def list_documents(workspace_id: str = "default"):
     """List all documents currently in the knowledge base."""
     await ingestion_pipeline.initialize()
-    docs = await qdrant.list_documents("knowledge_base")
+    docs = await qdrant.list_documents("knowledge_base", workspace_id=workspace_id)
     return docs
 
 @app.get("/documents/{name:path}")
@@ -90,9 +92,9 @@ async def get_document(name: str):
     return {"name": name, "content": content}
 
 @app.delete("/documents/{name:path}")
-async def delete_document(name: str):
+async def delete_document(name: str, workspace_id: str = "default"):
     """Delete a document from the knowledge base."""
-    await qdrant.delete_document("knowledge_base", name)
+    await qdrant.delete_document("knowledge_base", name, workspace_id=workspace_id)
     return {"status": "success", "message": f"Document {name} deleted."}
 
 @app.get("/chat/history/{thread_id}")
@@ -125,16 +127,22 @@ async def get_chat_history(thread_id: str):
     return {"messages": history}
 
 @app.get("/chat/threads")
-async def list_chat_threads():
-    """List all available chat threads from MongoDB with their titles."""
+async def list_chat_threads(workspace_id: str = "default"):
+    """List all available chat threads for a workspace from MongoDB with their titles."""
     from backend.app.core.mongodb import mongodb_manager
     
     db = mongodb_manager.get_async_database()
     checkpoints_col = db["checkpoints"]
     metadata_col = db["thread_metadata"]
     
-    # Aggregation to get unique thread IDs sorted by most recent activity
+    # 1. Fetch metadata for the workspace to get relevant thread_ids
+    workspace_threads = await metadata_col.find({"workspace_id": workspace_id}).to_list(None)
+    thread_ids = [doc["thread_id"] for doc in workspace_threads]
+    
+    # 2. Aggregation to get unique thread IDs from checkpoints (in case metadata is missing or for sorting)
+    # We filter by the thread_ids found in metadata for that workspace
     pipeline = [
+        {"$match": {"thread_id": {"$in": thread_ids}}},
         {"$sort": {"_id": -1}},
         {"$group": {
             "_id": "$thread_id",
@@ -144,18 +152,18 @@ async def list_chat_threads():
     ]
     
     results = await checkpoints_col.aggregate(pipeline).to_list(None)
-    thread_ids = [res["_id"] for res in results]
+    sorted_thread_ids = [res["_id"] for res in results]
     
-    # Fetch existing titles
-    metadata_docs = await metadata_col.find({"thread_id": {"$in": thread_ids}}).to_list(None)
-    title_map = {doc["thread_id"]: doc.get("title") for doc in metadata_docs}
+    # Fetch titles and flags for sorted list
+    meta_map = {doc["thread_id"]: doc for doc in workspace_threads}
     
     threads = []
-    for tid in thread_ids:
+    for tid in sorted_thread_ids:
+        meta = meta_map.get(tid, {})
         threads.append({
             "id": tid,
-            "title": title_map.get(tid, f"Chat {tid[:8]}"),
-            "has_thinking": tid in title_map
+            "title": meta.get("title", f"Chat {tid[:8]}"),
+            "has_thinking": meta.get("has_thinking", False)
         })
     
     return {"threads": threads}
@@ -190,7 +198,7 @@ async def delete_thread(thread_id: str):
     
     return {"status": "success", "message": f"Thread {thread_id} deleted"}
 
-async def generate_thread_title(message: str, thread_id: str):
+async def generate_thread_title(message: str, thread_id: str, workspace_id: str = "default"):
     """Generate a short title for the thread based on the first message."""
     from backend.app.core.llm_provider import get_llm
     from backend.app.core.mongodb import mongodb_manager
@@ -210,15 +218,18 @@ async def generate_thread_title(message: str, thread_id: str):
         
         await col.update_one(
             {"thread_id": thread_id},
-            {"$set": {"title": title}},
+            {"$set": {"title": title, "workspace_id": workspace_id}},
             upsert=True
         )
     except Exception as e:
         logger.error(f"Failed to generate title: {e}")
 
-async def stream_graph_updates(message: str, thread_id: str = "default") -> AsyncGenerator[str, None]:
+async def stream_graph_updates(message: str, thread_id: str = "default", workspace_id: str = "default") -> AsyncGenerator[str, None]:
     """Stream events from the LangGraph execution with persistence."""
-    inputs = {"messages": [HumanMessage(content=message)]}
+    inputs = {
+        "messages": [HumanMessage(content=message)],
+        "workspace_id": workspace_id
+    }
     config = {"configurable": {"thread_id": thread_id}}
     
     async for event in graph_app.astream_events(inputs, config=config, version="v2"):
@@ -233,6 +244,13 @@ async def stream_graph_updates(message: str, thread_id: str = "default") -> Asyn
                 settings = settings_manager.get_settings()
                 
                 if settings.show_reasoning and "reasoning_steps" in output:
+                    # Update metadata flag
+                    from backend.app.core.mongodb import mongodb_manager
+                    db = mongodb_manager.get_async_database()
+                    await db["thread_metadata"].update_one(
+                        {"thread_id": thread_id},
+                        {"$set": {"has_thinking": True}}
+                    )
                     yield f"data: {json.dumps({'type': 'reasoning', 'steps': output['reasoning_steps']})}\n\n"
                 if "sources" in output:
                     yield f"data: {json.dumps({'type': 'sources', 'sources': output['sources']})}\n\n"
@@ -255,13 +273,14 @@ async def chat_stream(request: Request):
     data = await request.json()
     message = data.get("message")
     thread_id = data.get("thread_id", "default")
-    logger.info(f"Received chat request for thread {thread_id}: {message[:50]}...")
+    workspace_id = data.get("workspace_id", "default")
+    logger.info(f"Received chat request for thread {thread_id} in workspace {workspace_id}: {message[:50]}...")
     
     # Generate title in background if it's potentially a new thread
-    asyncio.create_task(generate_thread_title(message, thread_id))
+    asyncio.create_task(generate_thread_title(message, thread_id, workspace_id))
     
     return StreamingResponse(
-        stream_graph_updates(message, thread_id),
+        stream_graph_updates(message, thread_id, workspace_id),
         media_type="text/event-stream"
     )
 
