@@ -53,37 +53,54 @@ class QdrantProvider:
         query_text: str, 
         limit: int = 5,
         mode: str = "hybrid",
-        alpha: float = 0.5
+        alpha: float = 0.5,
+        workspace_id: Optional[str] = None
     ):
         """
-        Perform hybrid search utilizing Qdrant's Query API.
-        Combines dense vector search with full-text matching if supported by the model,
-        or uses RRF style fusion logic.
+        Perform hybrid search with workspace-level isolation.
+        Filters by current workspace OR shared documents.
         """
-        # Qdrant 1.10+ supports advanced Query API
-        # For simplicity in this template, we'll use a weighted search approach
-        
+        # Define Workspace Filter
+        filter_query = None
+        if workspace_id:
+            filter_query = qmodels.Filter(
+                should=[
+                    qmodels.FieldCondition(
+                        key="workspace_id",
+                        match=qmodels.MatchValue(value=workspace_id)
+                    ),
+                    qmodels.FieldCondition(
+                        key="shared_with",
+                        match=qmodels.MatchValue(value=workspace_id)
+                    )
+                ]
+            )
+
         # 1. Vector Search using the new Query API
         response = await self.client.query_points(
             collection_name=collection_name,
             query=query_vector,
+            query_filter=filter_query,
             limit=limit * 2,
             with_payload=True
         )
         vector_results = response.points
         
-        # 2. Text/Keyword Search (using payload filter as a proxy for simpler setups)
-        # In a real production setup, we'd use a separate BM25 index or Qdrant's full-text features
+        # 2. Text/Keyword Search
+        text_filter = filter_query or qmodels.Filter()
+        if not text_filter.must:
+            text_filter.must = []
+        
+        text_filter.must.append(
+            qmodels.FieldCondition(
+                key="text",
+                match=qmodels.MatchText(text=query_text)
+            )
+        )
+
         text_results_response = await self.client.scroll(
             collection_name=collection_name,
-            scroll_filter=qmodels.Filter(
-                must=[
-                    qmodels.FieldCondition(
-                        key="text",
-                        match=qmodels.MatchText(text=query_text)
-                    )
-                ]
-            ),
+            scroll_filter=text_filter,
             limit=limit * 2,
             with_payload=True
         )
@@ -118,11 +135,26 @@ class QdrantProvider:
             for doc_id in sorted_ids[:limit]
         ]
 
-    async def list_documents(self, collection_name: str):
-        """List distinct documents in the collection using the 'source' field."""
-        # Use scroll to get unique sources from the payload
+    async def list_documents(self, collection_name: str, workspace_id: Optional[str] = None):
+        """List distinct documents in the workspace (including shared ones)."""
+        filter_query = None
+        if workspace_id:
+            filter_query = qmodels.Filter(
+                should=[
+                    qmodels.FieldCondition(
+                        key="workspace_id",
+                        match=qmodels.MatchValue(value=workspace_id)
+                    ),
+                    qmodels.FieldCondition(
+                        key="shared_with",
+                        match=qmodels.MatchValue(value=workspace_id)
+                    )
+                ]
+            )
+
         response = await self.client.scroll(
             collection_name=collection_name,
+            scroll_filter=filter_query,
             limit=10000,
             with_payload=True,
             with_vectors=False
@@ -135,15 +167,19 @@ class QdrantProvider:
                 docs[source] = {
                     "name": source,
                     "extension": point.payload.get("extension", "unknown"),
-                    "chunks": 0
+                    "chunks": 0,
+                    "shared": point.payload.get("workspace_id") != workspace_id if workspace_id else False
                 }
             if source:
                 docs[source]["chunks"] += 1
                 
         return list(docs.values())
 
-    async def delete_document(self, collection_name: str, source_name: str):
-        """Delete all points associated with a specific source."""
+    async def delete_document(self, collection_name: str, source_name: str, workspace_id: str):
+        """Delete a document from a specific workspace. 
+        Note: If document is shared, it only 'unshares' unless user is owner.
+        For simplicity, this deletes all chunks if workspace_id matches owner.
+        """
         return await self.client.delete(
             collection_name=collection_name,
             points_selector=qmodels.Filter(
@@ -151,6 +187,10 @@ class QdrantProvider:
                     qmodels.FieldCondition(
                         key="source",
                         match=qmodels.MatchValue(value=source_name)
+                    ),
+                    qmodels.FieldCondition(
+                        key="workspace_id",
+                        match=qmodels.MatchValue(value=workspace_id)
                     )
                 ]
             )

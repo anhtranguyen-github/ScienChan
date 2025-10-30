@@ -6,6 +6,9 @@ class AgentState(TypedDict):
     # The messages in the conversation
     messages: Annotated[List[BaseMessage], add_messages]
     
+    # Current workspace ID
+    workspace_id: str
+    
     # Summary of the conversation history
     summary: str
     

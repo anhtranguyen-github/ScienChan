@@ -7,14 +7,14 @@ export interface Thread {
     has_thinking?: boolean;
 }
 
-export function useThreads() {
+export function useThreads(workspaceId: string = "default") {
     const [threads, setThreads] = useState<Thread[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const fetchThreads = useCallback(async () => {
         setIsLoading(true);
         try {
-            const res = await fetch(API_ROUTES.CHAT_THREADS);
+            const res = await fetch(`${API_ROUTES.CHAT_THREADS}?workspace_id=${workspaceId}`);
             if (res.ok) {
                 const data = await res.json();
                 setThreads(data.threads || []);
@@ -24,7 +24,7 @@ export function useThreads() {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [workspaceId]);
 
     const updateThreadTitle = async (id: string, title: string) => {
         try {

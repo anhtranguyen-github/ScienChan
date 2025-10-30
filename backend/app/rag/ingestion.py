@@ -60,7 +60,9 @@ class IngestionPipeline:
                 "text": chunk, 
                 "source": (metadata or {}).get("filename") or os.path.basename(file_path),
                 "extension": ext,
-                "index": i
+                "index": i,
+                "workspace_id": (metadata or {}).get("workspace_id", "default"),
+                "shared_with": (metadata or {}).get("shared_with", [])
             }
             for i, chunk in enumerate(all_chunks)
         ]
@@ -81,7 +83,13 @@ class IngestionPipeline:
         
         ids = [str(uuid.uuid4()) for _ in chunks]
         payloads = [
-            {**(metadata or {}), "text": chunk, "index": i}
+            {
+                **(metadata or {}), 
+                "text": chunk, 
+                "index": i,
+                "workspace_id": (metadata or {}).get("workspace_id", "default"),
+                "shared_with": (metadata or {}).get("shared_with", [])
+            }
             for i, chunk in enumerate(chunks)
         ]
         

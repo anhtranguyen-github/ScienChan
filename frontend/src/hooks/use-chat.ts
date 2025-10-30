@@ -11,7 +11,7 @@ export interface Message {
     sources?: Array<{ id: number, name: string, content: string }>;
 }
 
-export function useChat() {
+export function useChat(workspaceId: string = "default") {
     const [messages, setMessages] = useState<Message[]>([]);
     const [threadId, setThreadId] = useState<string>(() => {
         if (typeof window !== 'undefined') {
@@ -71,7 +71,8 @@ export function useChat() {
                 },
                 body: JSON.stringify({
                     message: content,
-                    thread_id: threadId
+                    thread_id: threadId,
+                    workspace_id: workspaceId
                 }),
                 onmessage(msg) {
                     if (msg.event === 'FatalError') throw new Error(msg.data);
@@ -160,7 +161,7 @@ export function useChat() {
             console.error('Failed to send message:', error);
             setIsLoading(false);
         }
-    }, [threadId]);
+    }, [threadId, workspaceId]);
 
     return { messages, isLoading, sendMessage, clearChat, threadId, setThreadId };
 }
