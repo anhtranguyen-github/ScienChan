@@ -65,3 +65,7 @@ scripts/
 test-resources/
 TESTING_CONSTRAINTS_AND_BUGS.md
 mongo_data/
+backend/app/tools/arxiv_downloader/downloads/
+*.pdf
+*.zip
+*.tar.gz
