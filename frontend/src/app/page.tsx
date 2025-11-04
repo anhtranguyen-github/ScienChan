@@ -252,6 +252,14 @@ export default function ChatPage() {
             <span className="text-sm font-medium">Global Settings</span>
           </button>
 
+          <a
+            href="/documents"
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/5 transition-all group text-gray-400 hover:text-white"
+          >
+            <Database size={16} className="group-hover:text-indigo-400 transition-colors" />
+            <span className="text-sm font-medium">Knowledge Bank</span>
+          </a>
+
           <div className="mt-4 px-4 py-3 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-white/5">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/20">
