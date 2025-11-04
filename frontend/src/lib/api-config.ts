@@ -15,6 +15,8 @@ export const API_ROUTES = {
     THREAD_TITLE: (threadId: string) => `${API_BASE_URL}/chat/threads/${threadId}/title`,
     THREAD_DELETE: (threadId: string) => `${API_BASE_URL}/chat/threads/${threadId}`,
     DOCUMENTS: `${API_BASE_URL}/documents`,
+    DOCUMENTS_ALL: `${API_BASE_URL}/documents-all`,
+    DOCUMENTS_UPDATE_WS: `${API_BASE_URL}/documents/update-workspaces`,
     DOCUMENT_GET: (name: string) => `${API_BASE_URL}/documents/${name}`,
     DOCUMENT_DELETE: (name: string) => `${API_BASE_URL}/documents/${name}`,
     UPLOAD: `${API_BASE_URL}/upload`,

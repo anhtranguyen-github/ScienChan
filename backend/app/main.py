@@ -97,6 +97,126 @@ async def delete_document(name: str, workspace_id: str = "default"):
     await qdrant.delete_document("knowledge_base", name, workspace_id=workspace_id)
     return {"status": "success", "message": f"Document {name} deleted."}
 
+@app.get("/documents-all")
+async def list_all_documents():
+    """List all unique documents across all workspaces."""
+    from qdrant_client.http import models as qmodels
+    
+    # We use scroll to get all points (up to 10k for this dashboard)
+    response = await qdrant.client.scroll(
+        collection_name="knowledge_base",
+        limit=10000,
+        with_payload=True,
+        with_vectors=False
+    )
+    
+    docs = {}
+    for point in response[0]:
+        source = point.payload.get("source")
+        if not source: continue
+        
+        ws_id = point.payload.get("workspace_id", "default")
+        shared = point.payload.get("shared_with", [])
+        
+        if source not in docs:
+            docs[source] = {
+                "name": source,
+                "extension": point.payload.get("extension", "unknown"),
+                "workspace_id": ws_id,
+                "shared_with": shared,
+                "chunks": 0,
+                "points": []
+            }
+        
+        docs[source]["chunks"] += 1
+        # Add minimal point info for metadata view
+        docs[source]["points"].append({
+            "id": str(point.id),
+            "payload": point.payload
+        })
+                
+    return list(docs.values())
+
+@app.get("/documents/{name:path}/inspect")
+async def inspect_document(name: str):
+    """Deep inspection of document points and embeddings."""
+    from qdrant_client.http import models as qmodels
+    
+    response = await qdrant.client.scroll(
+        collection_name="knowledge_base",
+        scroll_filter=qmodels.Filter(
+            must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=name))]
+        ),
+        limit=100,
+        with_payload=True,
+        with_vectors=True
+    )
+    
+    inspection_data = []
+    for point in response[0]:
+        inspection_data.append({
+            "id": point.id,
+            "payload": point.payload,
+            "vector_size": len(point.vector) if point.vector else 0,
+            "vector_preview": point.vector[:5] if point.vector else []
+        })
+        
+    return inspection_data
+@app.post("/documents/update-workspaces")
+async def update_document_workspaces(request: Request):
+    """Update workspace assignment or sharing for a document."""
+    data = await request.json()
+    name = data.get("name")
+    workspace_id = data.get("workspace_id") # Current owner
+    target_workspace_id = data.get("target_workspace_id") # New owner or share target
+    action = data.get("action", "share") # "move" or "share" or "unshare"
+    
+    if not name or not target_workspace_id:
+        raise HTTPException(status_code=400, detail="name and target_workspace_id are required")
+        
+    from qdrant_client.http import models as qmodels
+    
+    if action == "move":
+        # Change workspace_id for all points of this document
+        await qdrant.client.set_payload(
+            collection_name="knowledge_base",
+            payload={"workspace_id": target_workspace_id},
+            points=qmodels.Filter(
+                must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=name))]
+            )
+        )
+    elif action == "share":
+        # Get existing points to preserve current sharing
+        res = await qdrant.client.scroll(
+            collection_name="knowledge_base",
+            scroll_filter=qmodels.Filter(
+                must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=name))]
+            ),
+            limit=1,
+            with_payload=True
+        )
+        if res[0]:
+            current_shared = res[0][0].payload.get("shared_with", [])
+            if target_workspace_id not in current_shared:
+                current_shared.append(target_workspace_id)
+                await qdrant.client.set_payload(
+                    collection_name="knowledge_base",
+                    payload={"shared_with": current_shared},
+                    points=qmodels.Filter(
+                        must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=name))]
+                    )
+                )
+    elif action == "unshare":
+        await qdrant.client.set_payload(
+            collection_name="knowledge_base",
+            payload={"shared_with": []},
+            points=qmodels.Filter(
+                must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=name))]
+            )
+        )
+        
+    return {"status": "success", "message": f"Document {name} {action}ed successfully."}
+
 @app.get("/chat/history/{thread_id}")
 async def get_chat_history(thread_id: str):
     """Fetch the chat history for a specific thread."""
