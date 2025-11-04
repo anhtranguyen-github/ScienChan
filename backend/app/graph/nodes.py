@@ -5,7 +5,7 @@ from backend.app.graph.state import AgentState
 from backend.app.rag.qdrant_provider import qdrant
 from backend.app.rag.rag_service import rag_service
 from backend.app.tools.registry import get_tools
-from backend.app.core.llm_provider import get_llm
+from backend.app.providers.llm import get_llm
 
 # Initialize Logger
 logger = logging.getLogger(__name__)

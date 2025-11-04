@@ -21,7 +21,7 @@ workflow.add_edge("retrieve", "reason")
 def should_continue(state: AgentState):
     """Router to decide between tools and final generation."""
     last_message = state["messages"][-1]
-    if last_message.tool_calls:
+    if getattr(last_message, "tool_calls", None):
         return "tools"
     return "generate"
 

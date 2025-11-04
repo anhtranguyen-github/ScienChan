@@ -1,6 +1,6 @@
 from typing import List
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from backend.app.core.embedding_provider import get_embeddings
+from backend.app.providers.embedding import get_embeddings
 
 class RAGService:
     def __init__(self):
