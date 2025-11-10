@@ -20,9 +20,7 @@ test.describe('Chatbot App E2E', () => {
         await expect(page.getByText('Hello, are you working?')).toBeVisible();
 
         // Wait for assistant response (Thinking or Content)
-        // Since we mock backend or assume it runs, this might fail if backend isn't up.
-        // We will assert that the loading state appears or a response appears.
-        await expect(page.getByText('AI Architect')).toBeVisible();
+        await expect(page.getByText('Architect', { exact: true })).toBeVisible();
     });
 
     test('should upload and delete a document', async ({ page }) => {

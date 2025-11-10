@@ -6,7 +6,7 @@ import { useWorkspaces } from '@/hooks/use-workspaces';
 import {
     FileText, Database, Trash2, Share2,
     ExternalLink, Info, Search, Filter,
-    ChevronLeft, Layers, MoreHorizontal,
+    ChevronLeft, Layers, MoreHorizontal, Layout,
     Move, X, Check, Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

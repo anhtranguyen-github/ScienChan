@@ -13,6 +13,11 @@ class DocumentService:
     @staticmethod
     async def upload(file: UploadFile, workspace_id: str) -> int:
         """Process and ingest a new document."""
+        # 1. Check for duplicates in the workspace
+        docs = await qdrant.list_documents("knowledge_base", workspace_id=workspace_id)
+        if any(d["name"] == file.filename for d in docs):
+            raise ValueError(f"Document '{file.filename}' already exists in this workspace.")
+
         suffix = os.path.splitext(file.filename)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             shutil.copyfileobj(file.file, tmp)

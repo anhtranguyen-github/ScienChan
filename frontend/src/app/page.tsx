@@ -7,7 +7,7 @@ import { useThreads } from '@/hooks/use-threads';
 import { useWorkspaces } from '@/hooks/use-workspaces';
 import { cn } from '@/lib/utils';
 import {
-  Send, Cpu, Loader2, Wrench, Bot, Trash2, User,
+  Send, Cpu, Loader2, Wrench, Bot, Trash2, User, Hammer,
   Settings as SettingsIcon, Lightbulb, LightbulbOff,
   Plus, ChevronDown, ChevronRight, MessageSquare, Database, Edit3
 } from 'lucide-react';
@@ -28,7 +28,7 @@ export default function ChatPage() {
   const { settings, updateSettings } = useSettings();
   const [input, setInput] = useState('');
   const [showTools, setShowTools] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [settingsContext, setSettingsContext] = useState<{ id?: string; name?: string } | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const [isKBOpen, setIsKBOpen] = useState(true);
   const [activeSource, setActiveSource] = useState<{ id: number; name: string; content: string } | null>(null);
@@ -86,189 +86,131 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen bg-[#0a0a0b] text-white overflow-hidden font-sans">
-      {/* Sidebar - Modern Dark Glass */}
-      <aside className="w-80 bg-[#121214] border-r border-white/5 flex flex-col overflow-hidden">
+      {/* Sidebar - Minimalist Design */}
+      <aside className="w-72 bg-[#121214] border-r border-white/5 flex flex-col overflow-hidden">
         {/* Sidebar Header */}
-        <div className="p-6 pb-2">
-          <div className="flex items-center gap-3 px-2 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Cpu size={22} className="text-white" />
+        <div className="p-4 flex flex-col gap-4">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                <Cpu size={18} className="text-white" />
+              </div>
+              <span className="text-sm font-bold tracking-tight text-white">Architect</span>
             </div>
-            <span className="text-lg font-bold tracking-tight">AI Architect</span>
+            <button
+              onClick={handleNewChat}
+              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
+              title="New Chat"
+            >
+              <Plus size={18} />
+            </button>
           </div>
 
-          <div className="mb-4">
-            <WorkspaceSwitcher
-              workspaces={workspaces}
-              currentWorkspace={currentWorkspace}
-              onSelect={selectWorkspace}
-              onCreate={createWorkspace}
-            />
-          </div>
-
-          <button
-            onClick={handleNewChat}
-            className="flex items-center gap-3 w-full p-4 rounded-2xl bg-blue-600 hover:bg-blue-500 transition-all border border-blue-400/20 group shrink-0 shadow-lg shadow-blue-600/10"
-          >
-            <Plus size={18} className="text-white" />
-            <span className="text-sm font-bold">New Chat</span>
-          </button>
+          <WorkspaceSwitcher
+            workspaces={workspaces}
+            currentWorkspace={currentWorkspace}
+            onSelect={selectWorkspace}
+            onCreate={createWorkspace}
+          />
         </div>
 
         {/* Sidebar Scrollable Content */}
-        <div className="flex-1 flex flex-col overflow-hidden px-4 min-h-0">
+        <div className="flex-1 flex flex-col overflow-hidden px-3 mt-2">
           {/* Thread History Section */}
-          <div className={cn(
-            "flex flex-col min-h-0 transition-all duration-500 ease-in-out py-4",
-            isHistoryOpen ? "flex-1" : "flex-none"
-          )}>
-            <button
-              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-              className="flex items-center justify-between w-full px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors group"
-            >
-              <div className="flex items-center gap-2">
-                <MessageSquare size={14} />
-                <span>Chat History</span>
-              </div>
-              {isHistoryOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
+          <div className="flex flex-col min-h-0 py-2">
+            <div className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              Recent Chats
+            </div>
 
-            <AnimatePresence initial={false}>
-              {isHistoryOpen && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex-1 overflow-y-auto custom-scrollbar space-y-1 mt-2"
-                >
-                  {threads.length === 0 ? (
-                    <div className="px-4 py-3 text-[11px] text-gray-600 italic">No recent conversations</div>
-                  ) : (
-                    threads.map((thread) => (
-                      <div
-                        key={thread.id}
-                        className={cn(
-                          "flex items-center gap-1 w-full rounded-xl transition-all group",
-                          threadId === thread.id
-                            ? "bg-white/10 text-white border border-white/10"
-                            : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
-                        )}
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-0.5 mt-1">
+              {threads.length === 0 ? (
+                <div className="px-3 py-3 text-[11px] text-gray-600 italic">No recent chats</div>
+              ) : (
+                threads.map((thread) => (
+                  <div
+                    key={thread.id}
+                    className={cn(
+                      "flex items-center group px-1",
+                      threadId === thread.id ? "bg-white/5 rounded-xl border border-white/5" : ""
+                    )}
+                  >
+                    <button
+                      onClick={() => selectThread(thread.id)}
+                      className="flex items-center gap-3 flex-1 px-3 py-2.5 text-left overflow-hidden"
+                    >
+                      <MessageSquare size={14} className={cn(threadId === thread.id ? "text-blue-400" : "text-gray-600")} />
+                      <span className={cn(
+                        "text-xs truncate flex-1",
+                        threadId === thread.id ? "text-white font-medium" : "text-gray-400 font-normal"
+                      )}>
+                        {thread.title}
+                      </span>
+                    </button>
+
+                    <div className="flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Delete?')) deleteThread(thread.id);
+                        }}
+                        className="p-1 hover:text-red-400 text-gray-600"
                       >
-                        <button
-                          onClick={() => selectThread(thread.id)}
-                          className="flex items-center gap-3 flex-1 px-4 py-3 text-left overflow-hidden"
-                        >
-                          <MessageSquare size={14} className={cn(threadId === thread.id ? "text-blue-400" : "text-gray-600 group-hover:text-gray-400")} />
-                          <span className="text-xs font-medium truncate flex-1">{thread.title}</span>
-                          {thread.has_thinking && (
-                            <Lightbulb size={12} className="text-yellow-500/50 group-hover:text-yellow-500 transition-colors" />
-                          )}
-                        </button>
-
-                        <div className="flex items-center gap-1 pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const newTitle = prompt('New title:', thread.title);
-                              if (newTitle && newTitle !== thread.title) {
-                                updateThreadTitle(thread.id, newTitle);
-                              }
-                            }}
-                            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-colors"
-                            title="Rename"
-                          >
-                            <Edit3 size={12} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm('Delete this chat?')) {
-                                deleteThread(thread.id);
-                                if (threadId === thread.id) handleNewChat();
-                              }
-                            }}
-                            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-red-400 transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </motion.div>
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
-            </AnimatePresence>
+            </div>
           </div>
 
-          <div className="h-px bg-white/5 my-4 mx-2 shrink-0" />
+          {/* Knowledge Base Section - Compact */}
+          <div className="flex flex-col min-h-0 py-2 mt-4 border-t border-white/5">
+            <div className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest flex justify-between items-center">
+              <span>Knowledge Base</span>
+              <a href="/documents" className="text-blue-500 hover:underline text-[9px]">View All</a>
+            </div>
 
-          {/* Knowledge Base Section */}
-          <div className={cn(
-            "flex flex-col min-h-0 transition-all duration-500 ease-in-out py-4",
-            isKBOpen ? "flex-1" : "flex-none"
-          )}>
-            <button
-              onClick={() => setIsKBOpen(!isKBOpen)}
-              className="flex items-center justify-between w-full px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors group shrink-0"
-            >
-              <div className="flex items-center gap-2">
-                <Database size={14} />
-                <span>Knowledge Base</span>
-              </div>
-              {isKBOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-
-            <AnimatePresence initial={false}>
-              {isKBOpen && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex-1 min-h-0 mt-2 overflow-hidden"
-                >
-                  <KnowledgeBase workspaceId={workspaceId} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="flex-1 min-h-0 mt-1 overflow-hidden">
+              <KnowledgeBase workspaceId={workspaceId} isSidebar={true} />
+            </div>
           </div>
         </div>
 
-        {/* Sidebar Footer */}
-        <div className="p-4 bg-[#0a0a0b]/50 border-t border-white/5 space-y-2">
-          <button
-            onClick={() => setShowTools(true)}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/5 transition-all group text-gray-400 hover:text-white"
-          >
-            <Wrench size={16} className="group-hover:text-blue-400 transition-colors" />
-            <span className="text-sm font-medium">Manage Tools</span>
-          </button>
-
-          <button
-            onClick={() => setShowSettings(true)}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/5 transition-all group text-gray-400 hover:text-white"
-          >
-            <SettingsIcon size={16} className="group-hover:text-purple-400 transition-colors" />
-            <span className="text-sm font-medium">Global Settings</span>
-          </button>
-
-          <a
-            href="/documents"
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/5 transition-all group text-gray-400 hover:text-white"
-          >
-            <Database size={16} className="group-hover:text-indigo-400 transition-colors" />
-            <span className="text-sm font-medium">Knowledge Bank</span>
-          </a>
-
-          <div className="mt-4 px-4 py-3 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-white/5">
+        {/* Sidebar Footer - Compact */}
+        <div className="p-4 bg-[#0a0a0b]/50 border-t border-white/5">
+          <div className="flex items-center justify-between gap-2 p-3 bg-white/5 rounded-2xl border border-white/5 group">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/20">
-                <User size={14} className="text-blue-400" />
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                JD
               </div>
               <div className="flex flex-col">
-                <span className="text-[11px] font-bold text-gray-300">Pro Developer</span>
-                <span className="text-[9px] text-gray-500 font-medium">Online & Synced</span>
+                <span className="text-xs font-bold text-white">Developer</span>
+                <span className="text-[10px] text-gray-500">Pro Plan</span>
               </div>
+            </div>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setShowTools(true)}
+                className="p-1.5 text-gray-500 hover:text-green-400 transition-colors"
+                title="Manage Tools"
+              >
+                <Hammer size={14} />
+              </button>
+              <button
+                onClick={() => setSettingsContext({ id: workspaceId, name: currentWorkspace?.name })}
+                className="p-1.5 text-gray-500 hover:text-blue-400 transition-colors"
+                title="Workspace Settings"
+              >
+                <SettingsIcon size={14} />
+              </button>
+              <button
+                onClick={() => setSettingsContext({})}
+                className="p-1.5 text-gray-500 hover:text-purple-400 transition-colors"
+                title="Global Settings"
+              >
+                <Wrench size={14} />
+              </button>
             </div>
           </div>
         </div>
@@ -403,10 +345,12 @@ export default function ChatPage() {
             onClose={() => setShowTools(false)}
           />
         )}
-        {showSettings && (
+        {settingsContext !== null && (
           <SettingsManager
             key="settings-modal"
-            onClose={() => setShowSettings(false)}
+            workspaceId={settingsContext.id}
+            workspaceName={settingsContext.name}
+            onClose={() => setSettingsContext(null)}
           />
         )}
         {activeSource && (

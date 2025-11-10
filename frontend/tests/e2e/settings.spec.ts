@@ -6,7 +6,7 @@ test.describe('Global Settings', () => {
         await page.goto('/');
 
         // 1. Open Settings
-        await page.getByText('Global Settings').click();
+        await page.getByTitle('Global Settings').click();
         await expect(page.getByText('Application Settings')).toBeVisible();
 
         // 2. Switch to Retrieval tab
@@ -23,7 +23,7 @@ test.describe('Global Settings', () => {
         await expect(page.getByText('Application Settings')).not.toBeVisible({ timeout: 10000 });
 
         // 6. Re-open and verify persistence
-        await page.getByText('Global Settings').click();
+        await page.getByTitle('Global Settings').click();
         await page.getByRole('button', { name: 'Retrieval' }).click();
 
         // Check if VECTOR button has the active class (bg-blue-500/20)
@@ -34,7 +34,7 @@ test.describe('Global Settings', () => {
     test('should toggle reasoning visibility', async ({ page }) => {
         await page.goto('/');
 
-        await page.getByText('Global Settings').click();
+        await page.getByTitle('Global Settings').click();
         await page.getByRole('button', { name: 'System' }).click();
 
         // Find the toggle button (it's the only one in System tab for now)
@@ -44,7 +44,7 @@ test.describe('Global Settings', () => {
         await page.getByRole('button', { name: 'Save Changes' }).click();
 
         // Verify it stayed toggled
-        await page.getByText('Global Settings').click();
+        await page.getByTitle('Global Settings').click();
         await page.getByRole('button', { name: 'System' }).click();
         // The toggle should now have bg-gray-700 if it was on (default True)
         // Actually, let's jus verify it can be clicked and saved without error

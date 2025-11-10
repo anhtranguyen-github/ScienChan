@@ -4,14 +4,14 @@ test.describe('Tool Management', () => {
 
     test('should open tool manager', async ({ page }) => {
         await page.goto('/');
-        await page.getByText('Manage Tools').click();
+        await page.getByTitle('Manage Tools').click();
         await expect(page.getByText('Tool Management')).toBeVisible();
         await expect(page.getByText('calculator')).toBeVisible();
     });
 
     test('should add and delete a custom tool', async ({ page }) => {
         await page.goto('/');
-        await page.getByText('Manage Tools').click();
+        await page.getByTitle('Manage Tools').click();
 
         // Add Tool
         const timestamp = Date.now();

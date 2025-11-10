@@ -36,18 +36,17 @@ export function WorkspaceSwitcher({
         <div className="relative relative-z-50">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-3 w-full p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group"
+                className="flex items-center justify-between w-full p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group"
             >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shrink-0">
-                    <Layout size={16} />
-                </div>
-                <div className="flex-1 text-left overflow-hidden">
-                    <div className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Workspace</div>
-                    <div className="text-sm font-semibold truncate text-gray-200">
-                        {currentWorkspace?.name || 'Select Workspace'}
+                <div className="flex items-center gap-2 overflow-hidden">
+                    <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                        {currentWorkspace?.name?.[0].toUpperCase() || 'W'}
                     </div>
+                    <span className="text-xs font-bold truncate text-gray-300">
+                        {currentWorkspace?.name || 'Workspace'}
+                    </span>
                 </div>
-                <ChevronDown size={16} className={cn("text-gray-500 transition-transform", isOpen && "rotate-180")} />
+                <ChevronDown size={14} className={cn("text-gray-600 transition-transform", isOpen && "rotate-180")} />
             </button>
 
             <AnimatePresence>

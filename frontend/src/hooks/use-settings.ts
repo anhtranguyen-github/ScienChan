@@ -13,13 +13,16 @@ export interface AppSettings {
     show_reasoning: boolean;
 }
 
-export function useSettings() {
+export function useSettings(workspaceId?: string) {
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchSettings = useCallback(async () => {
         try {
-            const res = await fetch(API_ROUTES.SETTINGS);
+            const url = workspaceId
+                ? `${API_ROUTES.SETTINGS}?workspace_id=${workspaceId}`
+                : API_ROUTES.SETTINGS;
+            const res = await fetch(url);
             const data = await res.json();
             setSettings(data);
         } catch (err) {
@@ -27,11 +30,14 @@ export function useSettings() {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [workspaceId]);
 
     const updateSettings = async (updates: Partial<AppSettings>) => {
         try {
-            const res = await fetch(API_ROUTES.SETTINGS, {
+            const url = workspaceId
+                ? `${API_ROUTES.SETTINGS}?workspace_id=${workspaceId}`
+                : API_ROUTES.SETTINGS;
+            const res = await fetch(url, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updates),

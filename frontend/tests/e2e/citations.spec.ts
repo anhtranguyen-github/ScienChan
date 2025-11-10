@@ -37,7 +37,7 @@ test.describe('Citations and Source Viewer', () => {
             response.url().includes('/chat/stream') && response.status() === 200
         );
 
-        await page.getByLabel('Send message').first().click();
+        await page.getByRole('button', { name: 'Send message' }).click();
         await streamResponsePromise;
 
         // 3. Wait for the response to contain the citation [1]

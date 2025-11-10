@@ -1,19 +1,19 @@
-from fastapi import APIRouter, HTTPException
-from typing import Dict, Any
+from fastapi import APIRouter, HTTPException, Query
+from typing import Dict, Any, Optional
 from backend.app.core.schemas import AppSettings
 from backend.app.core.settings_manager import settings_manager
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 @router.get("/", response_model=AppSettings)
-async def get_settings():
-    """Get current application settings."""
-    return settings_manager.get_settings()
+async def get_settings(workspace_id: Optional[str] = Query(None)):
+    """Get settings for a specific workspace or global defaults."""
+    return await settings_manager.get_settings(workspace_id)
 
 @router.patch("/", response_model=AppSettings)
-async def update_settings(updates: Dict[str, Any]):
-    """Update application settings."""
+async def update_settings(updates: Dict[str, Any], workspace_id: Optional[str] = Query(None)):
+    """Update settings for a specific workspace or global defaults."""
     try:
-        return settings_manager.update_settings(updates)
+        return await settings_manager.update_settings(updates, workspace_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

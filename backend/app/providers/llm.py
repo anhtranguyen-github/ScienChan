@@ -3,10 +3,11 @@ from langchain_anthropic import ChatAnthropic
 from langchain_community.chat_models import ChatOllama
 from backend.app.core.config import ai_settings
 from backend.app.core.settings_manager import settings_manager
+from typing import Optional
 
-def get_llm():
-    """Factory to get the configured LLM provider."""
-    settings = settings_manager.get_settings()
+async def get_llm(workspace_id: Optional[str] = None):
+    """Factory to get the configured LLM provider for a specific workspace."""
+    settings = await settings_manager.get_settings(workspace_id)
     provider = settings.llm_provider.lower()
     model = settings.llm_model
     

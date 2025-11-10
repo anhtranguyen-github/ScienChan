@@ -6,24 +6,20 @@ from backend.app.rag.qdrant_provider import qdrant
 from backend.app.rag.rag_service import rag_service
 from backend.app.tools.registry import get_tools
 from backend.app.providers.llm import get_llm
+from backend.app.core.settings_manager import settings_manager
 
 # Initialize Logger
 logger = logging.getLogger(__name__)
 
-# Initialize LLM via provider factory
-llm = get_llm()
-llm_with_tools = llm.bind_tools(get_tools())
-
-from backend.app.core.settings_manager import settings_manager
-
 async def retrieval_node(state: AgentState) -> Dict:
     """Retrieve relevant context based on configured settings."""
-    settings = settings_manager.get_settings()
-    last_message = state["messages"][-1].content
-    logger.info(f"Retrieving context ({settings.retrieval_mode}) for query: {last_message[:50]}...")
-    query_vector = await rag_service.get_query_embedding(last_message)
-    
     workspace_id = state.get("workspace_id", "default")
+    settings = await settings_manager.get_settings(workspace_id)
+    
+    last_message = state["messages"][-1].content
+    logger.info(f"WS [{workspace_id}] - Retrieving context ({settings.retrieval_mode}) for query: {last_message[:50]}...")
+    
+    query_vector = await rag_service.get_query_embedding(last_message, workspace_id=workspace_id)
     
     # Use Search Strategy from settings
     results = await qdrant.hybrid_search(
@@ -60,11 +56,15 @@ from langchain_core.runnables import RunnableConfig
 
 async def reason_node(state: AgentState, config: RunnableConfig) -> Dict:
     """Analyze context and decide next steps."""
+    workspace_id = state.get("workspace_id", "default")
+    llm = await get_llm(workspace_id)
+    llm_with_tools = llm.bind_tools(get_tools())
+    
     context_str = ""
     for s in state.get("sources", []):
         context_str += f"[{s['id']}] Source: {s['name']}\nContent: {s['content']}\n\n"
     
-    logger.info(f"Context string for reasoning: {context_str[:200]}...")
+    logger.info(f"WS [{workspace_id}] - Context string for reasoning: {context_str[:200]}...")
 
     summary = state.get("summary", "")
     summary_context = f"\n\n--- PREVIOUS CONVERSATION SUMMARY ---\n{summary}" if summary else ""
@@ -133,11 +133,13 @@ async def generate_node(state: AgentState) -> Dict:
 async def summarize_node(state: AgentState) -> Dict:
     """Summarize the conversation history if it gets too long."""
     # Only summarize if we have more than a certain number of messages
-    # We keep the last few messages for immediate context
     messages = state["messages"]
     if len(messages) <= 6:
         return {}
         
+    workspace_id = state.get("workspace_id", "default")
+    llm = await get_llm(workspace_id)
+    
     logger.info(f"Summarizing conversation history ({len(messages)} messages)...")
     
     existing_summary = state.get("summary", "")
@@ -153,7 +155,6 @@ async def summarize_node(state: AgentState) -> Dict:
             "IMPORTANT: You MUST preserve all specific facts, numbers, and key details provided by the user."
         )
         
-    # Get all messages except the last 2 (usually the current Q&A pair)
     messages_to_summarize = messages[:-2]
     
     response = await llm.ainvoke(
@@ -161,13 +162,7 @@ async def summarize_node(state: AgentState) -> Dict:
     )
     
     new_summary = response.content
-    
-    # Create RemoveMessage instructions for the summarized messages
-    # We remove everything except the last 2 messages
     delete_messages = [RemoveMessage(id=m.id) for m in messages_to_summarize if hasattr(m, "id")]
-    
-    deleted_ids = [m.id for m in delete_messages]
-    logger.info(f"Summarization complete. Removing {len(delete_messages)} messages: {deleted_ids}")
     
     return {
         "summary": new_summary,

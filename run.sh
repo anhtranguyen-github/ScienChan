@@ -93,11 +93,15 @@ BACKEND_PID=$!
 echo -n "Waiting for Backend to be ready..."
 count=0
 while ! curl -s http://localhost:$BACKEND_PORT/ > /dev/null; do
+    if ! ps -p $BACKEND_PID > /dev/null; then
+        echo -e "${RED}\nError: Backend process died. Check backend.log for details.${NC}"
+        exit 1
+    fi
     echo -n "."
     sleep 1
     count=$((count+1))
-    if [ $count -ge $MAX_RETRIES ]; then
-        echo -e "${RED}\nError: Backend failed to start. Check backend.log${NC}"
+    if [ $count -ge 60 ]; then
+        echo -e "${RED}\nError: Backend failed to respond within 60 seconds. Check backend.log${NC}"
         kill $BACKEND_PID
         exit 1
     fi

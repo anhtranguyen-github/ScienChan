@@ -25,6 +25,12 @@ class WorkspaceService:
     @staticmethod
     async def create(name: str, description: Optional[str] = None) -> Dict:
         db = mongodb_manager.get_async_database()
+        
+        # Check for duplicate name
+        existing = await db.workspaces.find_one({"name": name})
+        if existing:
+            raise ValueError(f"Workspace with name '{name}' already exists.")
+            
         new_ws = {"id": str(uuid.uuid4())[:8], "name": name, "description": description}
         await db.workspaces.insert_one(new_ws)
         return new_ws
@@ -32,6 +38,12 @@ class WorkspaceService:
     @staticmethod
     async def update(workspace_id: str, data: Dict) -> Optional[Dict]:
         db = mongodb_manager.get_async_database()
+        
+        if "name" in data:
+            existing = await db.workspaces.find_one({"name": data["name"], "id": {"$ne": workspace_id}})
+            if existing:
+                raise ValueError(f"Workspace with name '{data['name']}' already exists.")
+                
         return await db.workspaces.find_one_and_update(
             {"id": workspace_id},
             {"$set": data},
@@ -76,6 +88,11 @@ class WorkspaceService:
         ws["threads"] = threads
         ws["documents"] = list(docs_map.values())
         ws["stats"] = {"thread_count": len(threads), "doc_count": len(docs_map)}
+        
+        from backend.app.core.settings_manager import settings_manager
+        settings = await settings_manager.get_settings(workspace_id)
+        ws["settings"] = settings.model_dump()
+        
         return ws
 
 workspace_service = WorkspaceService()

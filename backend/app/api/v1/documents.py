@@ -13,6 +13,8 @@ async def upload_document(file: UploadFile = File(...), workspace_id: str = "def
             "chunks": num_chunks,
             "message": f"Successfully processed {num_chunks} chunks."
         }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

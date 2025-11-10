@@ -17,9 +17,10 @@ interface Document {
 
 interface KnowledgeBaseProps {
     workspaceId?: string;
+    isSidebar?: boolean;
 }
 
-export function KnowledgeBase({ workspaceId = "default" }: KnowledgeBaseProps) {
+export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: KnowledgeBaseProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -107,6 +108,45 @@ export function KnowledgeBase({ workspaceId = "default" }: KnowledgeBaseProps) {
             setIsViewing(false);
         }
     };
+
+    if (isSidebar) {
+        return (
+            <div className="flex flex-col gap-2 h-full overflow-hidden">
+                <div className="flex items-center justify-between px-2">
+                    <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white px-3 py-1.5 rounded-lg transition-all border border-white/5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+                        <Upload size={12} />
+                        Upload
+                        <input type="file" className="hidden" onChange={handleUpload} disabled={isUploading} />
+                    </label>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-1 px-1 custom-scrollbar">
+                    {documents.map((doc) => (
+                        <div
+                            key={doc.name}
+                            data-testid={`doc-item-${doc.name}`}
+                            className="group flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-all"
+                        >
+                            <div className="flex items-center gap-2 overflow-hidden">
+                                <FileText size={14} className="text-gray-600 shrink-0" />
+                                <span className="text-[11px] text-gray-400 truncate">{doc.name}</span>
+                            </div>
+                            <button
+                                onClick={() => handleDelete(doc.name)}
+                                data-testid={`delete-doc-${doc.name}`}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-600 hover:text-red-400"
+                            >
+                                <Trash2 size={12} />
+                            </button>
+                        </div>
+                    ))}
+                    {documents.length === 0 && !isUploading && (
+                        <div className="text-[10px] text-gray-700 italic px-2">Empty</div>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col gap-4 p-4 glass-panel rounded-2xl h-full border border-white/10 overflow-hidden">

@@ -50,7 +50,8 @@ class IngestionPipeline:
             return 0
 
         # Generate embeddings
-        embeddings = await rag_service.get_embeddings(all_chunks)
+        workspace_id = (metadata or {}).get("workspace_id", "default")
+        embeddings = await rag_service.get_embeddings(all_chunks, workspace_id=workspace_id)
         
         # Prepare points
         ids = [str(uuid.uuid4()) for _ in all_chunks]
@@ -79,7 +80,8 @@ class IngestionPipeline:
     async def process_text(self, text: str, metadata: Dict = None):
         """Process raw text: chunk, embed, and store."""
         chunks = rag_service.chunk_text(text)
-        embeddings = await rag_service.get_embeddings(chunks)
+        workspace_id = (metadata or {}).get("workspace_id", "default")
+        embeddings = await rag_service.get_embeddings(chunks, workspace_id=workspace_id)
         
         ids = [str(uuid.uuid4()) for _ in chunks]
         payloads = [

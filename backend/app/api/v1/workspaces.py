@@ -18,6 +18,7 @@ class Workspace(BaseModel):
 class WorkspaceDetail(Workspace):
     threads: List[dict] = []
     documents: List[dict] = []
+    settings: Optional[dict] = None
 
 class WorkspaceCreate(BaseModel):
     name: str
@@ -35,17 +36,23 @@ async def list_workspaces():
 @router.post("/", response_model=Workspace)
 @router.post("", response_model=Workspace)
 async def create_workspace(ws: WorkspaceCreate):
-    return await workspace_service.create(ws.name, ws.description)
+    try:
+        return await workspace_service.create(ws.name, ws.description)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/{workspace_id}", response_model=Workspace)
 async def update_workspace(workspace_id: str, ws: WorkspaceUpdate):
     update_data = {k: v for k, v in ws.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
-    result = await workspace_service.update(workspace_id, update_data)
-    if not result:
-        raise HTTPException(status_code=404, detail="Workspace not found")
-    return result
+    try:
+        result = await workspace_service.update(workspace_id, update_data)
+        if not result:
+            raise HTTPException(status_code=404, detail="Workspace not found")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.delete("/{workspace_id}")
 async def delete_workspace(workspace_id: str):

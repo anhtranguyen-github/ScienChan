@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 def create_app() -> FastAPI:
+    logger.info("Initializing FastAPI app...")
     app = FastAPI(
         title="Knowledge Bank API",
         description="Modular RAG & Agentic Chatbot API",
@@ -41,7 +42,9 @@ def create_app() -> FastAPI:
         }
 
     # Include modular routes
+    logger.info("Including API routers...")
     app.include_router(api_v1_router)
+    logger.info("API routers included.")
 
     return app
 
@@ -53,5 +56,5 @@ if __name__ == "__main__":
         "backend.app.main:app", 
         host="0.0.0.0", 
         port=ai_settings.BACKEND_PORT,
-        reload=True
+        reload=False
     )

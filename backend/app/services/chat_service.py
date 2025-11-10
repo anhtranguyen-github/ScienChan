@@ -94,7 +94,7 @@ class ChatService:
             if await col.find_one({"thread_id": thread_id}):
                 return
                 
-            llm = get_llm()
+            llm = await get_llm(workspace_id)
             prompt = f"Summarize the following user message into a very short (2-4 words) catchy title. Message: {message}\nTitle:"
             response = await llm.ainvoke(prompt)
             title = response.content.strip().strip('"')
@@ -120,7 +120,7 @@ class ChatService:
             if kind == "on_chain_end" and name in ["retrieve", "reason", "generate"]:
                 output = event["data"].get("output", {})
                 if isinstance(output, dict):
-                    settings = settings_manager.get_settings()
+                    settings = await settings_manager.get_settings(workspace_id)
                     if settings.show_reasoning and "reasoning_steps" in output:
                         db = mongodb_manager.get_async_database()
                         await db["thread_metadata"].update_one(

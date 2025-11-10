@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { X, Settings, Cpu, Search, Layout, Save, Loader2 } from 'lucide-react';
 import { useSettings, AppSettings } from '@/hooks/use-settings';
 
-export function SettingsManager({ onClose }: { onClose: () => void }) {
-    const { settings, updateSettings, isLoading } = useSettings();
+export function SettingsManager({ onClose, workspaceId, workspaceName }: { onClose: () => void, workspaceId?: string, workspaceName?: string }) {
+    const { settings, updateSettings, isLoading } = useSettings(workspaceId);
     const [localSettings, setLocalSettings] = useState<Partial<AppSettings>>({});
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'llm' | 'retrieval' | 'system'>('llm');
@@ -50,7 +50,9 @@ export function SettingsManager({ onClose }: { onClose: () => void }) {
                         <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
                             <Settings className="text-blue-400 w-5 h-5" />
                         </div>
-                        <h2 className="text-xl font-bold text-white">Application Settings</h2>
+                        <h2 className="text-xl font-bold text-white">
+                            {workspaceName ? `${workspaceName} Settings` : 'Application Settings'}
+                        </h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
                         <X className="w-6 h-6 text-gray-400" />
