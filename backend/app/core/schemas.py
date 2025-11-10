@@ -18,3 +18,18 @@ class AppSettings(BaseModel):
     # UI/System Settings
     theme: str = Field(default="dark", description="App theme")
     show_reasoning: bool = Field(default=True, description="Toggle reasoning steps visibility")
+
+class DocumentMetadata(BaseModel):
+    id: str
+    workspace_id: str
+    filename: str
+    extension: str
+    minio_path: str
+    status: Literal["uploaded", "indexing", "indexed", "failed"] = "uploaded"
+    current_version: int = 1
+    content_hash: str
+    chunks: int = 0
+    size_bytes: int = 0
+    created_at: str
+    updated_at: str
+    shared_with: list[str] = []

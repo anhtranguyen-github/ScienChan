@@ -17,10 +17,15 @@ services:
     volumes:
       - ./mongo_data:/data/db
     restart: always
-  # Optional: For local LLM testing if needed
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   ports:
-  #     - "11434:11434"
-  #   volumes:
-  #     - ./ollama_data:/root/.ollama
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./minio_data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    restart: always

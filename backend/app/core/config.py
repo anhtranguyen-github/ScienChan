@@ -24,6 +24,13 @@ class AISettings(BaseSettings):
     # MongoDB Configuration
     MONGO_URI: str = "mongodb://localhost:27017"
     MONGO_DB: str = "ai_architect"
+
+    # MinIO Configuration
+    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_SECURE: bool = False
+    MINIO_BUCKET: str = "rag-docs"
     
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -57,6 +57,21 @@ while ! curl -s http://localhost:$QDRANT_PORT/healthz > /dev/null; do
     fi
 done
 
+# Basic check for MinIO (port 9000)
+if ! nc -z localhost 9000; then
+    echo -n "Waiting for MinIO..."
+    count=0
+    while ! nc -z localhost 9000; do
+        echo -n "."
+        sleep 1
+        count=$((count+1))
+        if [ $count -ge $MAX_RETRIES ]; then
+            echo -e "${RED}\nError: MinIO failed to start.${NC}"
+            exit 1
+        fi
+    done
+fi
+
 # Basic check for MongoDB (port 27017)
 if ! nc -z localhost 27017; then
     echo -n "Waiting for MongoDB..."

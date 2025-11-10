@@ -22,3 +22,4 @@ voyageai
 motor
 langgraph-checkpoint-mongodb
 arxiv
+minio

@@ -46,6 +46,13 @@ def create_app() -> FastAPI:
     app.include_router(api_v1_router)
     logger.info("API routers included.")
 
+    @app.on_event("startup")
+    async def startup_event():
+        from backend.app.core.minio import minio_manager
+        logger.info("Ensuring MinIO bucket exists...")
+        minio_manager.ensure_bucket()
+        logger.info("MinIO bucket ready.")
+
     return app
 
 app = create_app()
