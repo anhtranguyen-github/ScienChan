@@ -63,7 +63,10 @@ class IngestionPipeline:
                 "extension": ext,
                 "index": i,
                 "workspace_id": (metadata or {}).get("workspace_id", "default"),
-                "shared_with": (metadata or {}).get("shared_with", [])
+                "shared_with": (metadata or {}).get("shared_with", []),
+                "doc_id": (metadata or {}).get("doc_id"),
+                "version": (metadata or {}).get("version"),
+                "minio_path": (metadata or {}).get("minio_path")
             }
             for i, chunk in enumerate(all_chunks)
         ]

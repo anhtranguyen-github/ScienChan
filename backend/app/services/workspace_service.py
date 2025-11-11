@@ -14,11 +14,8 @@ class WorkspaceService:
         enhanced = []
         for ws in workspaces:
             thread_count = await db["thread_metadata"].count_documents({"workspace_id": ws["id"]})
-            res_info = await qdrant.client.count(
-                collection_name="knowledge_base",
-                count_filter=qmodels.Filter(must=[qmodels.FieldCondition(key="workspace_id", match=qmodels.MatchValue(value=ws["id"]))])
-            )
-            ws["stats"] = {"thread_count": thread_count, "doc_count": res_info.count}
+            doc_count = await db["documents"].count_documents({"workspace_id": ws["id"]})
+            ws["stats"] = {"thread_count": thread_count, "doc_count": doc_count}
             enhanced.append(ws)
         return enhanced
 
@@ -26,6 +23,15 @@ class WorkspaceService:
     async def create(name: str, description: Optional[str] = None) -> Dict:
         db = mongodb_manager.get_async_database()
         
+        # Validation
+        name = name.strip()
+        if not name:
+            raise ValueError("Workspace name cannot be empty.")
+            
+        illegal_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+        if any(char in name for char in illegal_chars):
+            raise ValueError(f"Workspace name contains illegal characters: {' '.join(illegal_chars)}")
+
         # Check for duplicate name
         existing = await db.workspaces.find_one({"name": name})
         if existing:
@@ -40,9 +46,17 @@ class WorkspaceService:
         db = mongodb_manager.get_async_database()
         
         if "name" in data:
-            existing = await db.workspaces.find_one({"name": data["name"], "id": {"$ne": workspace_id}})
+            new_name = data["name"].strip()
+            if not new_name:
+                raise ValueError("Workspace name cannot be empty.")
+            illegal_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+            if any(char in new_name for char in illegal_chars):
+                raise ValueError(f"Workspace name contains illegal characters: {' '.join(illegal_chars)}")
+            
+            existing = await db.workspaces.find_one({"name": new_name, "id": {"$ne": workspace_id}})
             if existing:
-                raise ValueError(f"Workspace with name '{data['name']}' already exists.")
+                raise ValueError(f"Workspace with name '{new_name}' already exists.")
+            data["name"] = new_name
                 
         return await db.workspaces.find_one_and_update(
             {"id": workspace_id},
@@ -67,27 +81,15 @@ class WorkspaceService:
             t["id"] = t.get("thread_id", str(t.get("_id", "")))
             if "_id" in t: del t["_id"]
             
-        from qdrant_client.http import models as qmodels
-        scroll_res = await qdrant.client.scroll(
-            collection_name="knowledge_base",
-            scroll_filter=qmodels.Filter(must=[qmodels.FieldCondition(key="workspace_id", match=qmodels.MatchValue(value=workspace_id))]),
-            limit=100,
-            with_payload=True
-        )
-        
-        docs_map = {}
-        for point in scroll_res[0]:
-            name = point.payload.get("source", "Unknown")
-            if name not in docs_map:
-                docs_map[name] = {
-                    "name": name,
-                    "type": point.payload.get("type", "unknown"),
-                    "created_at": point.payload.get("created_at")
-                }
+        doc_cursor = db.documents.find({"workspace_id": workspace_id})
+        docs = await doc_cursor.to_list(length=100)
+        for d in docs:
+            if "_id" in d: d["_id"] = str(d["_id"])
+            d["name"] = d.get("filename")
         
         ws["threads"] = threads
-        ws["documents"] = list(docs_map.values())
-        ws["stats"] = {"thread_count": len(threads), "doc_count": len(docs_map)}
+        ws["documents"] = docs
+        ws["stats"] = {"thread_count": len(threads), "doc_count": len(docs)}
         
         from backend.app.core.settings_manager import settings_manager
         settings = await settings_manager.get_settings(workspace_id)
