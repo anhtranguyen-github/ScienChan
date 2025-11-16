@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "AI Agent with Reasoning Capabilities",
 };
 
+import { ErrorProvider } from "@/context/error-context";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ErrorProvider>
+          {children}
+        </ErrorProvider>
       </body>
     </html>
   );
