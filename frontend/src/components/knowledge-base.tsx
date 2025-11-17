@@ -7,6 +7,7 @@ import { API_ROUTES } from '@/lib/api-config';
 import { SourceViewer } from '@/components/source-viewer';
 import { cn } from '@/lib/utils';
 import { AnimatePresence } from 'framer-motion';
+import { useError } from '@/context/error-context';
 
 interface Document {
     name: string;
@@ -24,6 +25,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { showError } = useError();
     const [activeSource, setActiveSource] = useState<{ id: number; name: string; content: string } | null>(null);
     const [isViewing, setIsViewing] = useState(false);
     const [isSharing, setIsSharing] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
 
     const fetchDocuments = async () => {
         try {
-            const res = await fetch(`${API_ROUTES.DOCUMENTS}?workspace_id=${workspaceId}`);
+            const res = await fetch(`${API_ROUTES.DOCUMENTS}?workspace_id=${encodeURIComponent(workspaceId)}`);
             if (res.ok) {
                 const data = await res.json();
                 setDocuments(data);
@@ -59,7 +61,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
         console.log("Uploading file:", file.name);
 
         try {
-            const res = await fetch(`${API_ROUTES.UPLOAD}?workspace_id=${workspaceId}`, {
+            const res = await fetch(`${API_ROUTES.UPLOAD}?workspace_id=${encodeURIComponent(workspaceId)}`, {
                 method: 'POST',
                 body: formData,
             });
@@ -68,9 +70,11 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
             } else {
                 const data = await res.json();
                 setError(data.detail || 'Upload failed');
+                showError("Ingestion Rejected", data.detail || 'The document could not be processed.', `File: ${file.name}`);
             }
-        } catch (err) {
+        } catch (err: any) {
             setError('Connection error');
+            showError("Network Error", err.message || 'Failed to reach storage cluster.');
         } finally {
             setIsUploading(false);
         }
@@ -79,14 +83,18 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
     const handleDelete = async (name: string) => {
         console.log("Deleting document:", name);
         try {
-            const res = await fetch(`${API_ROUTES.DOCUMENT_DELETE(name)}?workspace_id=${workspaceId}`, {
+            const res = await fetch(`${API_ROUTES.DOCUMENT_DELETE(name)}?workspace_id=${encodeURIComponent(workspaceId)}`, {
                 method: 'DELETE',
             });
             if (res.ok) {
                 setDocuments((prev) => prev.filter((d) => d.name !== name));
+            } else {
+                const data = await res.json();
+                showError("Purge Failed", data.detail || 'Document deletion failed.', `Resource: ${name}`);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to delete document', err);
+            showError("Network Error", err.message || 'Failed to complete deletion request.');
         }
     };
 
@@ -101,9 +109,13 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
                     name: data.name,
                     content: data.content
                 });
+            } else {
+                const data = await res.json();
+                showError("Retrieval Failure", data.detail || 'Could not fetch document content.', `Source: ${name}`);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to view document', err);
+            showError("Network Error", err.message || 'Connection to secondary index lost.');
         } finally {
             setIsViewing(false);
         }

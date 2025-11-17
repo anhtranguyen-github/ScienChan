@@ -20,7 +20,7 @@ export function useSettings(workspaceId?: string) {
     const fetchSettings = useCallback(async () => {
         try {
             const url = workspaceId
-                ? `${API_ROUTES.SETTINGS}?workspace_id=${workspaceId}`
+                ? `${API_ROUTES.SETTINGS}?workspace_id=${encodeURIComponent(workspaceId)}`
                 : API_ROUTES.SETTINGS;
             const res = await fetch(url);
             const data = await res.json();
@@ -35,7 +35,7 @@ export function useSettings(workspaceId?: string) {
     const updateSettings = async (updates: Partial<AppSettings>) => {
         try {
             const url = workspaceId
-                ? `${API_ROUTES.SETTINGS}?workspace_id=${workspaceId}`
+                ? `${API_ROUTES.SETTINGS}?workspace_id=${encodeURIComponent(workspaceId)}`
                 : API_ROUTES.SETTINGS;
             const res = await fetch(url, {
                 method: 'PATCH',

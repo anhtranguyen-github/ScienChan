@@ -22,13 +22,19 @@ export function WorkspaceSwitcher({
     const [isOpen, setIsOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [newWsName, setNewWsName] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
-    const handleCreate = (e: React.FormEvent) => {
+    const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
         if (newWsName.trim()) {
-            onCreate(newWsName);
-            setNewWsName('');
-            setIsCreating(false);
+            const result = await (onCreate as any)(newWsName);
+            if (result?.success) {
+                setNewWsName('');
+                setIsCreating(false);
+            } else {
+                setError(result?.error || 'Failed to create workspace');
+            }
         }
     };
 
@@ -91,7 +97,10 @@ export function WorkspaceSwitcher({
                                             value={newWsName}
                                             onChange={(e) => setNewWsName(e.target.value)}
                                             placeholder="Workspace name..."
-                                            className="w-full bg-[#0a0a0b] border border-white/10 rounded-xl px-3 py-2 text-sm focus:ring-1 ring-indigo-500 outline-none"
+                                            className={cn(
+                                                "w-full bg-[#0a0a0b] border rounded-xl px-3 py-2 text-sm focus:ring-1 outline-none transition-all",
+                                                error ? "border-red-500/50 ring-red-500/50" : "border-white/10 ring-indigo-500"
+                                            )}
                                         />
                                         <div className="flex gap-2">
                                             <button

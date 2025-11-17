@@ -14,7 +14,7 @@ export function useThreads(workspaceId: string = "default") {
     const fetchThreads = useCallback(async () => {
         setIsLoading(true);
         try {
-            const res = await fetch(`${API_ROUTES.CHAT_THREADS}?workspace_id=${workspaceId}`);
+            const res = await fetch(`${API_ROUTES.CHAT_THREADS}?workspace_id=${encodeURIComponent(workspaceId)}`);
             if (res.ok) {
                 const data = await res.json();
                 setThreads(data.threads || []);

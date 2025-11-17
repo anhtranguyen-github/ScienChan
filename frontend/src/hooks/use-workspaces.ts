@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/lib/api-config';
+import { useError } from '@/context/error-context';
 
 export interface Workspace {
     id: string;
@@ -20,10 +21,16 @@ export function useWorkspaces() {
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
     const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { showError } = useError();
 
     const fetchWorkspaces = useCallback(async () => {
         try {
             const res = await fetch(API_ROUTES.WORKSPACES);
+            if (!res.ok) {
+                const data = await res.json();
+                showError("Database Sync Failed", data.detail || res.statusText, res.url);
+                return;
+            }
             const data = await res.json();
             setWorkspaces(data);
 
@@ -61,9 +68,16 @@ export function useWorkspaces() {
             });
             if (res.ok) {
                 await fetchWorkspaces();
+                return { success: true };
+            } else {
+                const data = await res.json();
+                showError("Construction Error", data.detail || 'Failed to create workspace', `Endpoint: ${res.url}`);
+                return { success: false, error: data.detail || 'Failed to create workspace' };
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to create workspace:', err);
+            showError("Network Error", err.message || 'Connection to backend failed');
+            return { success: false, error: 'Connection error' };
         }
     };
 
@@ -76,8 +90,12 @@ export function useWorkspaces() {
             });
             if (res.ok) {
                 await fetchWorkspaces();
+            } else {
+                const data = await res.json();
+                showError("Modification Failed", data.detail || 'Failed to update workspace');
             }
-        } catch (err) {
+        } catch (err: any) {
+            showError("Network Error", err.message || 'Connection to backend failed');
             console.error('Failed to update workspace:', err);
         }
     };
@@ -92,8 +110,12 @@ export function useWorkspaces() {
                     localStorage.removeItem('currentWorkspaceId');
                 }
                 await fetchWorkspaces();
+            } else {
+                const data = await res.json();
+                showError("Deconstruction Error", data.detail || 'Failed to delete workspace');
             }
-        } catch (err) {
+        } catch (err: any) {
+            showError("Network Error", err.message || 'Connection to backend failed');
             console.error('Failed to delete workspace:', err);
         }
     };

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { API_ROUTES } from '@/lib/api-config';
+import { useError } from '@/context/error-context';
 
 export interface Message {
     id: string;
@@ -24,6 +25,7 @@ export function useChat(workspaceId: string = "default") {
         return 'default';
     });
     const [isLoading, setIsLoading] = useState(false);
+    const { showError } = useError();
 
     const fetchHistory = useCallback(async (id: string) => {
         try {
@@ -31,11 +33,14 @@ export function useChat(workspaceId: string = "default") {
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data.messages);
+            } else {
+                showError("History Retrieval Failed", "The server could not retrieve chat history for this thread.", `ID: ${id}`);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to fetch chat history:', err);
+            showError("Network Error", err.message || "Failed to connect to chat history service.");
         }
-    }, []);
+    }, [showError]);
 
     useEffect(() => {
         if (threadId) {
@@ -154,14 +159,16 @@ export function useChat(workspaceId: string = "default") {
                 onerror(err) {
                     console.error('SSE Error:', err);
                     setIsLoading(false);
+                    showError("Sync Stream Interrupted", "The connection to the AI reasoning engine was lost. Please try again.", "SSE Fatal Connection Error");
                     throw err;
                 },
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to send message:', error);
             setIsLoading(false);
+            showError("Dispatch Error", error.message || "Failed to initialize communication with the architect.");
         }
-    }, [threadId, workspaceId]);
+    }, [threadId, workspaceId, showError]);
 
     return { messages, isLoading, sendMessage, clearChat, threadId, setThreadId };
 }

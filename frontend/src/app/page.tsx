@@ -20,7 +20,7 @@ import { SourceViewer } from '@/components/source-viewer';
 import { WorkspaceSwitcher } from '@/components/workspace-switcher';
 
 export default function ChatPage() {
-  const { workspaces, currentWorkspace, selectWorkspace, createWorkspace } = useWorkspaces();
+  const { workspaces, currentWorkspace, selectWorkspace, createWorkspace, isLoading: workspacesLoading } = useWorkspaces();
   const workspaceId = currentWorkspace?.id || 'default';
 
   const { messages, isLoading, sendMessage, clearChat, threadId, setThreadId } = useChat(workspaceId);
@@ -29,8 +29,6 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [showTools, setShowTools] = useState(false);
   const [settingsContext, setSettingsContext] = useState<{ id?: string; name?: string } | null>(null);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
-  const [isKBOpen, setIsKBOpen] = useState(true);
   const [activeSource, setActiveSource] = useState<{ id: number; name: string; content: string } | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'error' | 'info' } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -48,12 +46,22 @@ export default function ChatPage() {
     }
   }, [messages]);
 
+  if (workspacesLoading) {
+    return (
+      <div className="h-screen w-screen bg-[#0a0a0b] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+          <span className="text-gray-500 text-sm font-medium animate-pulse">Initializing System...</span>
+        </div>
+      </div>
+    );
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
     sendMessage(input);
     setInput('');
-    // Refresh threads list when a new message starts a new thread (or just periodically)
     setTimeout(refreshThreads, 1000);
   };
 
@@ -86,9 +94,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen bg-[#0a0a0b] text-white overflow-hidden font-sans">
-      {/* Sidebar - Minimalist Design */}
       <aside className="w-72 bg-[#121214] border-r border-white/5 flex flex-col overflow-hidden">
-        {/* Sidebar Header */}
         <div className="p-4 flex flex-col gap-4">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
@@ -114,9 +120,7 @@ export default function ChatPage() {
           />
         </div>
 
-        {/* Sidebar Scrollable Content */}
         <div className="flex-1 flex flex-col overflow-hidden px-3 mt-2">
-          {/* Thread History Section */}
           <div className="flex flex-col min-h-0 py-2">
             <div className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
               Recent Chats
@@ -164,7 +168,6 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Knowledge Base Section - Compact */}
           <div className="flex flex-col min-h-0 py-2 mt-4 border-t border-white/5">
             <div className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest flex justify-between items-center">
               <span>Knowledge Base</span>
@@ -177,7 +180,6 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Sidebar Footer - Compact */}
         <div className="p-4 bg-[#0a0a0b]/50 border-t border-white/5">
           <div className="flex items-center justify-between gap-2 p-3 bg-white/5 rounded-2xl border border-white/5 group">
             <div className="flex items-center gap-3">
@@ -216,13 +218,10 @@ export default function ChatPage() {
         </div>
       </aside>
 
-      {/* Main Chat Area */}
       <main className="flex-1 flex flex-col relative">
-        {/* Background Gradients */}
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full -z-10" />
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full -z-10" />
 
-        {/* Header */}
         <header className="h-20 border-b border-white/5 flex items-center px-8 justify-between backdrop-blur-md sticky top-0 z-10 bg-[#0a0a0b]/50">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -249,7 +248,6 @@ export default function ChatPage() {
           </div>
         </header>
 
-        {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth">
           <AnimatePresence initial={false}>
             {messages.length === 0 && (
@@ -309,7 +307,6 @@ export default function ChatPage() {
           </AnimatePresence>
         </div>
 
-        {/* Input Area */}
         <div className="p-10 bg-gradient-to-t from-[#0a0a0b] via-[#0a0a0b]/90 to-transparent">
           <form
             onSubmit={handleSubmit}
@@ -361,7 +358,6 @@ export default function ChatPage() {
           />
         )}
 
-        {/* Notifications */}
         {notification && (
           <motion.div
             key="notification-toast"
