@@ -1,6 +1,7 @@
 import logging
 import json
 import asyncio
+from datetime import datetime
 from typing import AsyncGenerator, List, Dict, Optional
 from langchain_core.messages import HumanMessage
 from backend.app.graph.builder import app as graph_app
@@ -63,7 +64,8 @@ class ChatService:
             {
                 "id": tid,
                 "title": meta_map.get(tid, {}).get("title", f"Chat {tid[:8]}"),
-                "has_thinking": meta_map.get(tid, {}).get("has_thinking", False)
+                "has_thinking": meta_map.get(tid, {}).get("has_thinking", False),
+                "tags": meta_map.get(tid, {}).get("tags", [])
             }
             for tid in sorted_thread_ids
         ]
@@ -87,25 +89,51 @@ class ChatService:
 
     @staticmethod
     async def generate_title(message: str, thread_id: str, workspace_id: str = "default"):
-        """Automatically generate a title for a new thread."""
+        """Automatically generate a title and metadata tags for a new thread."""
         try:
             db = mongodb_manager.get_async_database()
             col = db["thread_metadata"]
-            if await col.find_one({"thread_id": thread_id}):
+            if await col.find_one({"thread_id": thread_id, "title": {"$exists": True}}):
                 return
                 
             llm = await get_llm(workspace_id)
-            prompt = f"Summarize the following user message into a very short (2-4 words) catchy title. Message: {message}\nTitle:"
+            prompt = (
+                f"Analyze the following user message and provide a catchy title (2-4 words) "
+                f"and up to 5 relevant short tags for categorization. "
+                f"Return ONLY a valid JSON object with keys 'title' (string) and 'tags' (list of strings).\n"
+                f"Message: {message}"
+            )
+            
             response = await llm.ainvoke(prompt)
-            title = response.content.strip().strip('"')
+            content = response.content.strip()
+            
+            # Remove markdown code blocks if present
+            if content.startswith("```json"):
+                content = content[7:-3].strip()
+            elif content.startswith("```"):
+                content = content[3:-3].strip()
+
+            try:
+                data = json.loads(content)
+                title = data.get("title", f"Chat {thread_id[:8]}")
+                tags = data.get("tags", [])[:5]
+            except Exception:
+                # Fallback
+                title = content.split("\n")[0][:50]
+                tags = []
             
             await col.update_one(
                 {"thread_id": thread_id},
-                {"$set": {"title": title, "workspace_id": workspace_id}},
+                {"$set": {
+                    "title": title, 
+                    "tags": tags,
+                    "workspace_id": workspace_id,
+                    "updated_at": datetime.utcnow().isoformat()
+                }},
                 upsert=True
             )
         except Exception as e:
-            logger.error(f"Failed to generate title: {e}")
+            logger.error(f"Failed to generate metadata for thread {thread_id}: {e}")
 
     @staticmethod
     async def stream_updates(message: str, thread_id: str, workspace_id: str) -> AsyncGenerator[str, None]:

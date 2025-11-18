@@ -5,6 +5,7 @@ export interface Thread {
     id: string;
     title: string;
     has_thinking?: boolean;
+    tags?: string[];
 }
 
 export function useThreads(workspaceId: string = "default") {
