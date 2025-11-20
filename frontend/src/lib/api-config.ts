@@ -27,4 +27,5 @@ export const API_ROUTES = {
     WORKSPACE_DETAIL: (id: string) => `${API_BASE_URL}/workspaces/${encodeURIComponent(id)}`,
     WORKSPACE_STATS: (id: string) => `${API_BASE_URL}/workspaces/${encodeURIComponent(id)}/details`,
     WORKSPACE_SHARE: (id: string) => `${API_BASE_URL}/workspaces/${encodeURIComponent(id)}/share-document`,
+    SEARCH: `${API_BASE_URL}/search`,
 };

@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 import { ErrorProvider } from "@/context/error-context";
+import { SearchProvider } from "@/context/search-context";
 
 export default function RootLayout({
   children,
@@ -30,7 +31,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ErrorProvider>
-          {children}
+          <SearchProvider>
+            {children}
+          </SearchProvider>
         </ErrorProvider>
       </body>
     </html>

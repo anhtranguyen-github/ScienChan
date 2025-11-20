@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import {
   Send, Cpu, Loader2, Wrench, Bot, Trash2, User, Hammer,
   Settings as SettingsIcon, Lightbulb, LightbulbOff,
-  Plus, ChevronDown, ChevronRight, MessageSquare, Database, Edit3
+  Plus, ChevronDown, ChevronRight, MessageSquare, Database, Edit3, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { KnowledgeBase } from '@/components/knowledge-base';
@@ -18,6 +18,7 @@ import { SettingsManager } from '@/components/settings-manager';
 import { ChatMessage } from '@/components/chat-message';
 import { SourceViewer } from '@/components/source-viewer';
 import { WorkspaceSwitcher } from '@/components/workspace-switcher';
+import { useGlobalSearch } from '@/context/search-context';
 
 export default function ChatPage() {
   const { workspaces, currentWorkspace, selectWorkspace, createWorkspace, isLoading: workspacesLoading } = useWorkspaces();
@@ -26,6 +27,7 @@ export default function ChatPage() {
   const { messages, isLoading, sendMessage, clearChat, threadId, setThreadId } = useChat(workspaceId);
   const { threads, refreshThreads, updateThreadTitle, deleteThread } = useThreads(workspaceId);
   const { settings, updateSettings } = useSettings();
+  const { toggleSearch } = useGlobalSearch();
   const [input, setInput] = useState('');
   const [showTools, setShowTools] = useState(false);
   const [settingsContext, setSettingsContext] = useState<{ id?: string; name?: string } | null>(null);
@@ -103,13 +105,22 @@ export default function ChatPage() {
               </div>
               <span className="text-sm font-bold tracking-tight text-white">Architect</span>
             </div>
-            <button
-              onClick={handleNewChat}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
-              title="New Chat"
-            >
-              <Plus size={18} />
-            </button>
+            <div className="flex gap-1">
+              <button
+                onClick={toggleSearch}
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
+                title="Global Search (⌘K)"
+              >
+                <Search size={18} />
+              </button>
+              <button
+                onClick={handleNewChat}
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
+                title="New Chat"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
           </div>
 
           <WorkspaceSwitcher
@@ -134,34 +145,48 @@ export default function ChatPage() {
                   <div
                     key={thread.id}
                     className={cn(
-                      "flex items-center group px-1",
-                      threadId === thread.id ? "bg-white/5 rounded-xl border border-white/5" : ""
+                      "flex flex-col group px-1",
+                      threadId === thread.id ? "bg-white/10 rounded-xl border border-white/10 shadow-lg" : "hover:bg-white/[0.02] rounded-xl transition-all"
                     )}
                   >
-                    <button
-                      onClick={() => selectThread(thread.id)}
-                      className="flex items-center gap-3 flex-1 px-3 py-2.5 text-left overflow-hidden"
-                    >
-                      <MessageSquare size={14} className={cn(threadId === thread.id ? "text-blue-400" : "text-gray-600")} />
-                      <span className={cn(
-                        "text-xs truncate flex-1",
-                        threadId === thread.id ? "text-white font-medium" : "text-gray-400 font-normal"
-                      )}>
-                        {thread.title}
-                      </span>
-                    </button>
-
-                    <div className="flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm('Delete?')) deleteThread(thread.id);
-                        }}
-                        className="p-1 hover:text-red-400 text-gray-600"
+                        onClick={() => selectThread(thread.id)}
+                        className="flex items-center gap-3 flex-1 px-3 py-2.5 text-left overflow-hidden"
                       >
-                        <Trash2 size={12} />
+                        <MessageSquare size={14} className={cn(threadId === thread.id ? "text-blue-400" : "text-gray-600")} />
+                        <span className={cn(
+                          "text-xs truncate flex-1",
+                          threadId === thread.id ? "text-white font-medium" : "text-gray-400 font-normal"
+                        )}>
+                          {thread.title}
+                        </span>
                       </button>
+
+                      <div className="flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm('Delete?')) deleteThread(thread.id);
+                          }}
+                          className="p-1 hover:text-red-400 text-gray-600"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
+                    {thread.tags && thread.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 px-8 pb-2.5 -mt-1">
+                        {thread.tags.slice(0, 3).map((tag: string) => (
+                          <span key={tag} className="text-[7px] px-1.5 py-0.5 rounded-md bg-white/5 text-gray-500 border border-white/5 font-bold tracking-tighter uppercase whitespace-nowrap">
+                            {tag}
+                          </span>
+                        ))}
+                        {thread.tags.length > 3 && (
+                          <span className="text-[7px] text-gray-700 font-bold px-1 py-0.5">+{thread.tags.length - 3}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
