@@ -208,6 +208,15 @@ export default function WorkspaceDetailPage() {
                                                         <Clock size={12} />
                                                         <span>{thread.last_active ? new Date(thread.last_active).toLocaleDateString() : 'Active now'}</span>
                                                     </div>
+                                                    {thread.tags && thread.tags.length > 0 && (
+                                                        <div className="flex flex-wrap gap-2 mt-3">
+                                                            {thread.tags.map((tag: string) => (
+                                                                <span key={tag} className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase font-black tracking-tighter">
+                                                                    {tag}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="p-2 rounded-xl bg-white/5 text-gray-700 group-hover:text-indigo-400 transition-colors">
                                                     <ExternalLink size={14} />

@@ -6,7 +6,7 @@ import { useWorkspaces, Workspace, WorkspaceDetail } from '@/hooks/use-workspace
 import {
     Layout, Plus, Trash2, Edit3, ChevronLeft,
     Database, MessageSquare, AlertCircle, X,
-    Activity, FileText, ExternalLink, Clock
+    Activity, FileText, ExternalLink, Clock, Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +25,19 @@ export default function WorkspacesPage() {
     const [isCreating, setIsCreating] = useState(false);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState<'name' | 'id'>('name');
+
+    const filteredWorkspaces = workspaces
+        .filter(ws =>
+            ws.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            ws.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            ws.id.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => {
+            if (sortBy === 'name') return a.name.localeCompare(b.name);
+            return a.id.localeCompare(b.id);
+        });
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -85,13 +98,33 @@ export default function WorkspacesPage() {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => setIsCreating(true)}
-                        className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
-                    >
-                        <Plus size={20} />
-                        Create Workspace
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <div className="relative group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-indigo-400 transition-colors" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Search environments..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="bg-[#121214] border border-white/5 rounded-2xl pl-12 pr-6 py-3 w-64 focus:w-80 outline-none focus:ring-2 ring-indigo-500/20 transition-all placeholder:text-gray-700 text-sm"
+                            />
+                        </div>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as any)}
+                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-xs font-bold uppercase tracking-widest outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-500"
+                        >
+                            <option value="name">Sort by Name</option>
+                            <option value="id">Sort by ID</option>
+                        </select>
+                        <button
+                            onClick={() => setIsCreating(true)}
+                            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95 whitespace-nowrap"
+                        >
+                            <Plus size={20} />
+                            Create Workspace
+                        </button>
+                    </div>
                 </div>
 
                 {/* Workspaces List - Full Width */}
@@ -100,14 +133,14 @@ export default function WorkspacesPage() {
                         <div className="col-span-full h-64 flex items-center justify-center">
                             <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
                         </div>
-                    ) : workspaces.length === 0 ? (
+                    ) : filteredWorkspaces.length === 0 ? (
                         <div className="col-span-full bg-[#121214] border border-white/10 rounded-[2rem] p-20 text-center">
                             <Layout size={64} className="mx-auto text-gray-700 mb-6" />
-                            <h3 className="text-xl font-bold mb-2">No Workspaces Found</h3>
-                            <p className="text-gray-500">Create your first environment to get started.</p>
+                            <h3 className="text-xl font-bold mb-2">No Matching Workspaces</h3>
+                            <p className="text-gray-500">Your search "{searchTerm}" did not return any results.</p>
                         </div>
                     ) : (
-                        workspaces.map((ws) => (
+                        filteredWorkspaces.map((ws) => (
                             <motion.div
                                 layout
                                 key={ws.id}

@@ -22,12 +22,18 @@ export default function DocumentsPage() {
     const [loadingInspect, setLoadingInspect] = useState(false);
     const [actionDoc, setActionDoc] = useState<{ doc: Document, type: 'move' | 'share' } | null>(null);
     const [filterWorkspace, setFilterWorkspace] = useState<string>('all');
+    const [filterExtension, setFilterExtension] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
 
     const filteredDocs = documents.filter(doc => {
         const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesWorkspace = filterWorkspace === 'all' || doc.workspace_id === filterWorkspace || doc.shared_with.includes(filterWorkspace);
-        return matchesSearch && matchesWorkspace;
+        const matchesExtension = filterExtension === 'all' || doc.extension.toLowerCase().includes(filterExtension.toLowerCase());
+        const matchesStatus = filterStatus === 'all' || (doc.status || 'ready') === filterStatus;
+        return matchesSearch && matchesWorkspace && matchesExtension && matchesStatus;
     });
+
+    const extensions = Array.from(new Set(documents.map(d => d.extension.toLowerCase()))).filter(Boolean);
 
     const handleSelectDoc = async (doc: Document) => {
         setSelectedDoc(doc);
@@ -87,12 +93,34 @@ export default function DocumentsPage() {
                         <select
                             value={filterWorkspace}
                             onChange={(e) => setFilterWorkspace(e.target.value)}
-                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-400"
+                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-400 font-bold uppercase tracking-tighter"
                         >
-                            <option value="all">All Workspaces</option>
+                            <option value="all">Everywhere</option>
                             {workspaces.map(ws => (
                                 <option key={ws.id} value={ws.id}>{ws.name}</option>
                             ))}
+                        </select>
+
+                        <select
+                            value={filterExtension}
+                            onChange={(e) => setFilterExtension(e.target.value)}
+                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-400 font-bold uppercase tracking-tighter"
+                        >
+                            <option value="all">Formats</option>
+                            {extensions.map(ext => (
+                                <option key={ext} value={ext}>{ext.replace('.', '')}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-400 font-bold uppercase tracking-tighter"
+                        >
+                            <option value="all">Health</option>
+                            <option value="ready">Ready</option>
+                            <option value="processing">Processing</option>
+                            <option value="error">Failed</option>
                         </select>
                     </div>
                 </div>
