@@ -5,10 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { useWorkspaces, WorkspaceDetail } from '@/hooks/use-workspaces';
 import {
     Layout, ChevronLeft, Database, MessageSquare,
-    FileText, ExternalLink, Clock, Calendar, BarChart3, Search
+    FileText, ExternalLink, Clock, Calendar, BarChart3, Search,
+    Trash2, AlertCircle, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useDocuments } from '@/hooks/use-documents';
 
 export default function WorkspaceDetailPage() {
     const params = useParams();
@@ -19,6 +21,9 @@ export default function WorkspaceDetailPage() {
     const [viewingWs, setViewingWs] = useState<WorkspaceDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const { deleteDocument } = useDocuments();
+    const [deletingDoc, setDeletingDoc] = useState<any | null>(null);
+    const [isVaultDeleteChecked, setIsVaultDeleteChecked] = useState(false);
 
     useEffect(() => {
         async function load() {
@@ -245,7 +250,7 @@ export default function WorkspaceDetailPage() {
                                 ) : (
                                     filteredDocs.map((doc, idx) => (
                                         <motion.div
-                                            key={idx}
+                                            key={doc.id || idx}
                                             whileHover={{ x: 4 }}
                                             className="p-5 rounded-3xl bg-white/5 border border-white/5 flex items-center gap-5 hover:border-purple-500/20 transition-all group"
                                         >
@@ -256,10 +261,19 @@ export default function WorkspaceDetailPage() {
                                                 <div className="text-sm font-bold truncate tracking-tight uppercase">{doc.name}</div>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-md">
-                                                        {doc.type || "PDF"}
+                                                        {doc.extension?.toUpperCase() || "DATA"}
                                                     </span>
                                                 </div>
                                             </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDeletingDoc(doc);
+                                                }}
+                                                className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/10 text-gray-700 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
                                         </motion.div>
                                     ))
                                 )}
@@ -268,6 +282,69 @@ export default function WorkspaceDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Document Deletion Modal */}
+            <AnimatePresence>
+                {deletingDoc && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setDeletingDoc(null)}
+                            className="absolute inset-0 bg-[#0a0a0b]/90 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                            className="relative w-full max-w-md bg-[#121214] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl"
+                        >
+                            <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mb-6">
+                                <AlertCircle size={32} />
+                            </div>
+                            <h2 className="text-2xl font-black mb-2 uppercase tracking-tight">Erase Resource?</h2>
+                            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                                You are removing <span className="text-white font-bold">{deletingDoc.name}</span> from this environment.
+                            </p>
+
+                            <div
+                                onClick={() => setIsVaultDeleteChecked(!isVaultDeleteChecked)}
+                                className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 mb-8 cursor-pointer hover:bg-white/10 transition-all select-none group"
+                            >
+                                <div className={cn(
+                                    "w-6 h-6 rounded-lg flex items-center justify-center border-2 transition-all",
+                                    isVaultDeleteChecked ? "bg-red-500 border-red-500 text-white" : "border-white/10 text-transparent"
+                                )}>
+                                    <Trash2 size={12} />
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-[10px] font-black uppercase text-gray-400 group-hover:text-white transition-colors">Wipe from Global Vault</div>
+                                    <div className="text-[9px] text-gray-600">Permanently delete from storage and vector bank</div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={async () => {
+                                        await deleteDocument(deletingDoc.name, workspaceId, isVaultDeleteChecked);
+                                        setDeletingDoc(null);
+                                        setIsVaultDeleteChecked(false);
+                                        // Refresh UI
+                                        const details = await getWorkspaceDetails(workspaceId);
+                                        setViewingWs(details);
+                                    }}
+                                    className="w-full py-4 rounded-2xl bg-red-600 text-white font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl shadow-red-600/20"
+                                >
+                                    Confirm Removal
+                                </button>
+                                <button
+                                    onClick={() => setDeletingDoc(null)}
+                                    className="w-full py-4 rounded-2xl bg-white/5 border border-white/5 text-gray-500 font-bold hover:bg-white/10 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

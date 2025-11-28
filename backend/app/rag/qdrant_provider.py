@@ -11,6 +11,10 @@ class QdrantProvider:
             port=ai_settings.QDRANT_PORT
         )
 
+    def get_collection_name(self, vector_size: int = 1536) -> str:
+        """Standardized naming for dimension-specific collections."""
+        return f"knowledge_base_{vector_size}"
+
     async def create_collection(self, collection_name: str, vector_size: int = 1536):
         """Create a new collection with optimized HNSW and keyword indexing."""
         if not await self.client.collection_exists(collection_name):
@@ -46,6 +50,13 @@ class QdrantProvider:
             wait=True
         )
 
+    async def get_effective_collection(self, collection_name: str, workspace_id: Optional[str] = None):
+        if collection_name == "knowledge_base" and workspace_id:
+             from backend.app.core.settings_manager import settings_manager
+             settings = await settings_manager.get_settings(workspace_id)
+             return self.get_collection_name(settings.embedding_dim)
+        return collection_name
+
     async def hybrid_search(
         self, 
         collection_name: str, 
@@ -60,6 +71,8 @@ class QdrantProvider:
         Perform hybrid search with workspace-level isolation.
         Filters by current workspace OR shared documents.
         """
+        collection_name = await self.get_effective_collection(collection_name, workspace_id)
+        
         # Define Workspace Filter
         filter_query = None
         if workspace_id:
@@ -137,6 +150,8 @@ class QdrantProvider:
 
     async def list_documents(self, collection_name: str, workspace_id: Optional[str] = None):
         """List distinct documents in the workspace (including shared ones)."""
+        collection_name = await self.get_effective_collection(collection_name, workspace_id)
+        
         filter_query = None
         if workspace_id:
             filter_query = qmodels.Filter(
@@ -175,29 +190,47 @@ class QdrantProvider:
                 
         return list(docs.values())
 
-    async def delete_document(self, collection_name: str, source_name: str, workspace_id: str):
+    async def delete_document(self, collection_name: str, source_name: str, workspace_id: Optional[str] = None):
         """Delete a document from a specific workspace. 
-        Note: If document is shared, it only 'unshares' unless user is owner.
-        For simplicity, this deletes all chunks if workspace_id matches owner.
+        Note: If workspace_id is None, it might delete from ALL knowledge_base variants? 
+        For safety, we usually have a workspace_id.
         """
-        return await self.client.delete(
-            collection_name=collection_name,
-            points_selector=qmodels.Filter(
-                must=[
-                    qmodels.FieldCondition(
-                        key="source",
-                        match=qmodels.MatchValue(value=source_name)
-                    ),
-                    qmodels.FieldCondition(
-                        key="workspace_id",
-                        match=qmodels.MatchValue(value=workspace_id)
-                    )
-                ]
+        # If no workspace_id, we can't easily guess the collection unless we check all of them.
+        # But our delete in DocumentService now passes workspace_id or we do a full purge.
+        if workspace_id:
+            collection_name = await self.get_effective_collection(collection_name, workspace_id)
+            await self.client.delete(
+                collection_name=collection_name,
+                points_selector=qmodels.Filter(
+                    must=[
+                        qmodels.FieldCondition(
+                            key="source",
+                            match=qmodels.MatchValue(value=source_name)
+                        ),
+                        qmodels.FieldCondition(
+                            key="workspace_id",
+                            match=qmodels.MatchValue(value=workspace_id)
+                        )
+                    ]
+                )
             )
-        )
+        else:
+            # Global Purge - Delete from all collections we manage
+            # For simplicity, let's assume 1536 and 768 for now or list all collections.
+            collections = ["knowledge_base_1536", "knowledge_base_768"]
+            for c in collections:
+                if await self.client.collection_exists(c):
+                    await self.client.delete(
+                        collection_name=c,
+                        points_selector=qmodels.Filter(
+                            must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=source_name))]
+                        )
+                    )
 
-    async def get_document_content(self, collection_name: str, source_name: str):
+    async def get_document_content(self, collection_name: str, source_name: str, workspace_id: Optional[str] = None):
         """Retrieve and reconstruct the content of a document from its chunks."""
+        collection_name = await self.get_effective_collection(collection_name, workspace_id)
+        
         response = await self.client.scroll(
             collection_name=collection_name,
             scroll_filter=qmodels.Filter(
@@ -215,9 +248,6 @@ class QdrantProvider:
         if not points:
             return None
         
-        # If chunks have an 'index', sort by it. Otherwise use the order from scroll.
-        # Currently process_file doesn't add 'index', but process_text does.
-        # Fallback to scroll order for reconstructed text.
         try:
             sorted_points = sorted(points, key=lambda x: x.payload.get("index", 0))
         except:
@@ -225,6 +255,9 @@ class QdrantProvider:
             
         content = "\n\n".join([p.payload.get("text", "") for p in sorted_points])
         return content
+
+# Global instance
+qdrant = QdrantProvider()
 
 # Global instance
 qdrant = QdrantProvider()

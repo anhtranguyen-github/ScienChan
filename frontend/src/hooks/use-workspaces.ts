@@ -59,12 +59,12 @@ export function useWorkspaces() {
         window.location.reload();
     };
 
-    const createWorkspace = async (name: string, description?: string) => {
+    const createWorkspace = async (payload: any) => {
         try {
             const res = await fetch(API_ROUTES.WORKSPACES, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, description })
+                body: JSON.stringify(payload)
             });
             if (res.ok) {
                 await fetchWorkspaces();
@@ -100,9 +100,9 @@ export function useWorkspaces() {
         }
     };
 
-    const deleteWorkspace = async (id: string) => {
+    const deleteWorkspace = async (id: string, vaultDelete: boolean = false) => {
         try {
-            const res = await fetch(API_ROUTES.WORKSPACE_DETAIL(id), {
+            const res = await fetch(`${API_ROUTES.WORKSPACE_DETAIL(id)}?vault_delete=${vaultDelete}`, {
                 method: 'DELETE'
             });
             if (res.ok) {

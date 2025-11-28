@@ -7,11 +7,13 @@ export interface DocumentPoint {
 }
 
 export interface Document {
+    id: string;
     name: string;
     extension: string;
     workspace_id: string;
     shared_with: string[];
     chunks: number;
+    status?: string;
     points: DocumentPoint[];
 }
 
@@ -36,10 +38,11 @@ export function useDocuments() {
         fetchDocuments();
     }, [fetchDocuments]);
 
-    const deleteDocument = async (name: string, workspaceId: string) => {
+    const deleteDocument = async (name: string, workspaceId: string, vaultDelete: boolean = false) => {
         try {
             const url = new URL(API_ROUTES.DOCUMENT_DELETE(name));
             url.searchParams.append('workspace_id', workspaceId);
+            url.searchParams.append('vault_delete', String(vaultDelete));
             const res = await fetch(url.toString(), {
                 method: 'DELETE'
             });
@@ -53,21 +56,31 @@ export function useDocuments() {
         return false;
     };
 
-    const updateWorkspaceAction = async (name: string, workspaceId: string, targetWorkspaceId: string, action: 'move' | 'share' | 'unshare') => {
+    const updateWorkspaceAction = async (name: string, workspaceId: string, targetWorkspaceId: string, action: 'move' | 'share' | 'unshare', forceReindex: boolean = false) => {
         try {
             const res = await fetch(API_ROUTES.DOCUMENTS_UPDATE_WS, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, workspace_id: workspaceId, target_workspace_id: targetWorkspaceId, action })
+                body: JSON.stringify({
+                    name,
+                    workspace_id: workspaceId,
+                    target_workspace_id: targetWorkspaceId,
+                    action,
+                    force_reindex: forceReindex
+                })
             });
             if (res.ok) {
                 await fetchDocuments();
-                return true;
+                return { success: true };
+            }
+            if (res.status === 409) {
+                const data = await res.json();
+                return { success: false, conflict: true, error: data.detail };
             }
         } catch (err) {
             console.error(`Failed to ${action} document:`, err);
         }
-        return false;
+        return { success: false };
     };
 
     const inspectDocument = async (name: string) => {

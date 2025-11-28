@@ -20,11 +20,12 @@ class WorkspaceService:
         return enhanced
 
     @staticmethod
-    async def create(name: str, description: Optional[str] = None) -> Dict:
+    async def create(data: Dict) -> Dict:
         db = mongodb_manager.get_async_database()
         
-        # Validation
-        name = name.strip()
+        name = data.get("name", "").strip()
+        description = data.get("description")
+        
         if not name:
             raise ValueError("Workspace name cannot be empty.")
             
@@ -37,8 +38,21 @@ class WorkspaceService:
         if existing:
             raise ValueError(f"Workspace with name '{name}' already exists.")
             
-        new_ws = {"id": str(uuid.uuid4())[:8], "name": name, "description": description}
+        ws_id = str(uuid.uuid4())[:8]
+        new_ws = {"id": ws_id, "name": name, "description": description}
         await db.workspaces.insert_one(new_ws)
+
+        # Initialize Workspace-Specific Fixed RAG Settings
+        from backend.app.core.settings_manager import settings_manager
+        rag_settings = {
+            "embedding_provider": data.get("embedding_provider", "openai"),
+            "embedding_model": data.get("embedding_model", "text-embedding-3-small"),
+            "embedding_dim": data.get("embedding_dim", 1536),
+            "chunk_size": data.get("chunk_size", 800),
+            "chunk_overlap": data.get("chunk_overlap", 150),
+        }
+        await settings_manager.update_settings(rag_settings, workspace_id=ws_id)
+        
         return new_ws
 
     @staticmethod
@@ -65,9 +79,26 @@ class WorkspaceService:
         )
 
     @staticmethod
-    async def delete(workspace_id: str):
+    async def delete(workspace_id: str, vault_delete: bool = False):
         db = mongodb_manager.get_async_database()
+        
+        # 1. Handle associated documents
+        # Fetch docs owned by or shared with this workspace
+        owned_docs = await db.documents.find({"workspace_id": workspace_id}).to_list(1000)
+        shared_docs = await db.documents.find({"shared_with": workspace_id}).to_list(1000)
+        
+        from backend.app.services.document_service import document_service
+        # For owned docs, apply chosen vault_delete logic
+        for doc in owned_docs:
+            await document_service.delete(doc["filename"], workspace_id, vault_delete=vault_delete)
+            
+        # For shared docs, we just remove the share association regardless
+        for doc in shared_docs:
+            await document_service.delete(doc["filename"], workspace_id, vault_delete=False)
+
+        # 2. Cleanup workspace meta
         await db.workspaces.delete_one({"id": workspace_id})
+        await db["workspace_settings"].delete_one({"workspace_id": workspace_id})
         await db["thread_metadata"].delete_many({"workspace_id": workspace_id})
 
     @staticmethod

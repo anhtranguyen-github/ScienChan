@@ -11,12 +11,20 @@ from langchain_community.document_loaders import (
 )
 
 class IngestionPipeline:
-    def __init__(self, collection_name: str = "knowledge_base"):
-        self.collection_name = collection_name
+    def __init__(self):
+        pass
 
-    async def initialize(self):
-        """Ensure the collection exists."""
-        await qdrant.create_collection(self.collection_name)
+    async def get_target_collection(self, workspace_id: str) -> str:
+        """Determine collection name based on workspace embedding dimensions."""
+        from backend.app.core.settings_manager import settings_manager
+        settings = await settings_manager.get_settings(workspace_id)
+        return qdrant.get_collection_name(settings.embedding_dim), settings.embedding_dim
+
+    async def initialize(self, workspace_id: str = "default"):
+        """Ensure the workspace's target collection exists."""
+        name, dim = await self.get_target_collection(workspace_id)
+        await qdrant.create_collection(name, vector_size=dim)
+        return name
 
     async def process_file(self, file_path: str, metadata: Dict = None):
         """
@@ -24,15 +32,14 @@ class IngestionPipeline:
         Automatically selects the appropriate loader based on extension.
         """
         ext = os.path.splitext(file_path)[1].lower()
+        workspace_id = (metadata or {}).get("workspace_id", "default")
+        
+        target_collection, _ = await self.get_target_collection(workspace_id)
         
         if ext == '.pdf':
             loader = PyPDFLoader(file_path)
-        elif ext in ['.txt', '.log']:
+        elif ext in ['.txt', '.log', '.md']:
             loader = TextLoader(file_path)
-        elif ext == '.md':
-            # Note: Unstructured requires some extra system libs, 
-            # for simpler setups TextLoader works for MD too.
-            loader = TextLoader(file_path) 
         elif ext == '.docx':
             loader = Docx2txtLoader(file_path)
         else:
@@ -43,14 +50,13 @@ class IngestionPipeline:
         
         all_chunks = []
         for doc in documents:
-            chunks = rag_service.chunk_text(doc.page_content)
+            chunks = await rag_service.chunk_text(doc.page_content, workspace_id=workspace_id)
             all_chunks.extend(chunks)
             
         if not all_chunks:
             return 0
 
         # Generate embeddings
-        workspace_id = (metadata or {}).get("workspace_id", "default")
         embeddings = await rag_service.get_embeddings(all_chunks, workspace_id=workspace_id)
         
         # Prepare points
@@ -62,7 +68,7 @@ class IngestionPipeline:
                 "source": (metadata or {}).get("filename") or os.path.basename(file_path),
                 "extension": ext,
                 "index": i,
-                "workspace_id": (metadata or {}).get("workspace_id", "default"),
+                "workspace_id": workspace_id,
                 "shared_with": (metadata or {}).get("shared_with", []),
                 "doc_id": (metadata or {}).get("doc_id"),
                 "version": (metadata or {}).get("version"),
@@ -73,7 +79,7 @@ class IngestionPipeline:
         
         # Store in Qdrant
         await qdrant.upsert_documents(
-            self.collection_name,
+            target_collection,
             vectors=embeddings,
             ids=ids,
             payloads=payloads
@@ -82,8 +88,10 @@ class IngestionPipeline:
 
     async def process_text(self, text: str, metadata: Dict = None):
         """Process raw text: chunk, embed, and store."""
-        chunks = rag_service.chunk_text(text)
         workspace_id = (metadata or {}).get("workspace_id", "default")
+        target_collection, _ = await self.get_target_collection(workspace_id)
+        
+        chunks = await rag_service.chunk_text(text, workspace_id=workspace_id)
         embeddings = await rag_service.get_embeddings(chunks, workspace_id=workspace_id)
         
         ids = [str(uuid.uuid4()) for _ in chunks]
@@ -92,14 +100,14 @@ class IngestionPipeline:
                 **(metadata or {}), 
                 "text": chunk, 
                 "index": i,
-                "workspace_id": (metadata or {}).get("workspace_id", "default"),
+                "workspace_id": workspace_id,
                 "shared_with": (metadata or {}).get("shared_with", [])
             }
             for i, chunk in enumerate(chunks)
         ]
         
         await qdrant.upsert_documents(
-            self.collection_name,
+            target_collection,
             vectors=embeddings,
             ids=ids,
             payloads=payloads

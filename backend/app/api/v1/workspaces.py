@@ -23,6 +23,11 @@ class WorkspaceDetail(Workspace):
 class WorkspaceCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    embedding_provider: Optional[str] = "openai"
+    embedding_model: Optional[str] = "text-embedding-3-small"
+    embedding_dim: Optional[int] = 1536
+    chunk_size: Optional[int] = 800
+    chunk_overlap: Optional[int] = 150
 
 class WorkspaceUpdate(BaseModel):
     name: Optional[str] = None
@@ -37,7 +42,7 @@ async def list_workspaces():
 @router.post("", response_model=Workspace)
 async def create_workspace(ws: WorkspaceCreate):
     try:
-        return await workspace_service.create(ws.name, ws.description)
+        return await workspace_service.create(ws.model_dump())
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -55,10 +60,10 @@ async def update_workspace(workspace_id: str, ws: WorkspaceUpdate):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.delete("/{workspace_id}")
-async def delete_workspace(workspace_id: str):
+async def delete_workspace(workspace_id: str, vault_delete: bool = False):
     if workspace_id == "default":
         raise HTTPException(status_code=400, detail="Cannot delete default workspace")
-    await workspace_service.delete(workspace_id)
+    await workspace_service.delete(workspace_id, vault_delete=vault_delete)
     return {"status": "success", "message": f"Workspace {workspace_id} deleted"}
 
 @router.get("/{workspace_id}/details", response_model=WorkspaceDetail)

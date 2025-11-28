@@ -95,7 +95,7 @@ class DocumentService:
             tmp_path = tmp.name
 
         try:
-            await ingestion_pipeline.initialize()
+            await ingestion_pipeline.initialize(workspace_id=workspace_id)
             num_chunks = await ingestion_pipeline.process_file(
                 tmp_path, 
                 metadata={
@@ -125,14 +125,13 @@ class DocumentService:
     async def list_by_workspace(workspace_id: str) -> List[Dict]:
         """List documents from MongoDB (Source of truth for management)."""
         db = mongodb_manager.get_async_database()
-        cursor = db.documents.find({"workspace_id": workspace_id})
-        docs = await cursor.to_list(length=100)
-        
-        # Add shared documents
-        shared_cursor = db.documents.find({"shared_with": workspace_id})
-        shared_docs = await shared_cursor.to_list(length=100)
-        
-        all_docs = docs + shared_docs
+        cursor = db.documents.find({
+            "$or": [
+                {"workspace_id": workspace_id},
+                {"shared_with": workspace_id}
+            ]
+        })
+        all_docs = await cursor.to_list(length=200)
         for d in all_docs:
             if d.get("shared_with") and workspace_id in d["shared_with"]:
                 d["is_shared"] = True
@@ -158,29 +157,74 @@ class DocumentService:
     @staticmethod
     async def get_content(name: str) -> Optional[str]:
         """Fetch reconstructed document content from Qdrant."""
-        return await qdrant.get_document_content("knowledge_base", name)
+        db = mongodb_manager.get_async_database()
+        doc = await db.documents.find_one({"filename": name})
+        workspace_id = doc.get("workspace_id") if doc else None
+        return await qdrant.get_document_content("knowledge_base", name, workspace_id=workspace_id)
 
     @staticmethod
-    async def delete(name: str, workspace_id: str):
-        """Delete document from all layers."""
+    async def delete(name: str, workspace_id: str, vault_delete: bool = False):
+        """Delete document association or perform permanent vault purge."""
         db = mongodb_manager.get_async_database()
-        doc = await db.documents.find_one({"filename": name, "workspace_id": workspace_id})
         
-        if doc:
-            # 1. Delete from MinIO
-            minio_manager.delete_file(doc["minio_path"])
-            # 2. Delete from MongoDB
+        # 1. Fetch document record
+        doc = await db.documents.find_one({"filename": name})
+        if not doc: return
+
+        if vault_delete:
+            # PERMANENT PURGE
+            # Delete from MinIO
+            try:
+                minio_manager.delete_file(doc["minio_path"])
+            except Exception as e:
+                logger.error(f"MinIO delete failed: {e}")
+            
+            # Delete from MongoDB
             await db.documents.delete_one({"id": doc["id"]})
             
-        # 3. Delete from Qdrant
-        await qdrant.delete_document("knowledge_base", name, workspace_id=workspace_id)
+            # Delete from Qdrant (All points for this source)
+            await qdrant.delete_document("knowledge_base", name)
+        else:
+            # SOFT REMOVAL (From workspace scope)
+            if doc["workspace_id"] == workspace_id:
+                # Is primary workspace. Move to "vault" (no primary workspace)
+                await db.documents.update_one(
+                    {"id": doc["id"]},
+                    {"$set": {"workspace_id": "vault"}}
+                )
+            elif workspace_id in doc.get("shared_with", []):
+                # Is shared workspace. Remove from shared_with list.
+                await db.documents.update_one(
+                    {"id": doc["id"]},
+                    {"$pull": {"shared_with": workspace_id}}
+                )
+            
+            # Also update Qdrant payload to reflect workspace removal
+            updated_doc = await db.documents.find_one({"id": doc["id"]})
+            if updated_doc:
+                from qdrant_client.http import models as qmodels
+                await qdrant.client.set_payload(
+                    collection_name="knowledge_base",
+                    payload={
+                        "workspace_id": updated_doc["workspace_id"],
+                        "shared_with": updated_doc.get("shared_with", [])
+                    },
+                    points=qmodels.Filter(must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=name))])
+                )
 
     @staticmethod
     async def inspect(name: str) -> List[Dict]:
         """Deep inspection of document vectors and payload."""
         from qdrant_client.http import models as qmodels
+        
+        db = mongodb_manager.get_async_database()
+        doc = await db.documents.find_one({"filename": name})
+        workspace_id = doc.get("workspace_id") if doc else None
+        
+        collection_name = await qdrant.get_effective_collection("knowledge_base", workspace_id)
+        
         response = await qdrant.client.scroll(
-            collection_name="knowledge_base",
+            collection_name=collection_name,
             scroll_filter=qmodels.Filter(
                 must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=name))]
             ),
@@ -200,34 +244,81 @@ class DocumentService:
         ]
 
     @staticmethod
-    async def update_workspaces(name: str, target_workspace_id: str, action: str):
-        """Cross-workspace orchestration (move/share)."""
+    async def update_workspaces(name: str, target_workspace_id: str, action: str, force_reindex: bool = False):
+        """Cross-workspace orchestration (move/share) with optional re-indexing."""
         db = mongodb_manager.get_async_database()
         
+        res = await db.documents.find_one({"filename": name})
+        if not res: return
+
+        from backend.app.core.settings_manager import settings_manager
+        target_settings = await settings_manager.get_settings(target_workspace_id)
+        source_settings = await settings_manager.get_settings(res["workspace_id"])
+        
+        is_incompatible = target_settings.embedding_dim != source_settings.embedding_dim
+        
+        if is_incompatible and not force_reindex:
+            raise ValueError(f"Incompatible Workspace: Target expects {target_settings.embedding_dim}d, Document is {source_settings.embedding_dim}d")
+
+        if force_reindex:
+            # Full Re-indexing Flow
+            file_data = minio_manager.get_file(res["minio_path"])
+            if not file_data:
+                raise ValueError("Source file missing in storage.")
+                
+            suffix = res.get("extension", ".tmp")
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp.write(file_data)
+                tmp_path = tmp.name
+
+            try:
+                # Initialize target collection if needed
+                await ingestion_pipeline.initialize(workspace_id=target_workspace_id)
+                
+                # Ingest into new collection/dimension
+                await ingestion_pipeline.process_file(
+                    tmp_path, 
+                    metadata={
+                        "filename": res["filename"], 
+                        "workspace_id": target_workspace_id,
+                        "doc_id": res["id"],
+                        "version": res.get("current_version", 1),
+                        "minio_path": res["minio_path"]
+                    }
+                )
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+
+        # Update MongoDB Association
         if action == "move":
             await db.documents.update_one(
                 {"filename": name},
                 {"$set": {"workspace_id": target_workspace_id}}
             )
-            # Update Qdrant too
-            from qdrant_client.http import models as qmodels
-            await qdrant.client.set_payload(
-                collection_name="knowledge_base",
-                payload={"workspace_id": target_workspace_id},
-                points=qmodels.Filter(must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=name))])
-            )
+            # update vectors in original collection if it wasn't reindexed?
+            # actually if we "move", the vectors in the old collection are now associated with the new WS
+            # ONLY IF dimensions matched. If it was reindexed, they are already in the new collection.
+            if not is_incompatible:
+                from qdrant_client.http import models as qmodels
+                await qdrant.client.set_payload(
+                    collection_name="knowledge_base",
+                    payload={"workspace_id": target_workspace_id},
+                    points=qmodels.Filter(must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=name))])
+                )
         elif action == "share":
             await db.documents.update_one(
                 {"filename": name},
                 {"$addToSet": {"shared_with": target_workspace_id}}
             )
-            # Update Qdrant
-            res = await db.documents.find_one({"filename": name})
-            if res:
+            # Update sharing status in Qdrant (for the vectors that matter)
+            updated_doc = await db.documents.find_one({"filename": name})
+            if updated_doc:
                 from qdrant_client.http import models as qmodels
+                # Update in source collection (dimension-aware)
                 await qdrant.client.set_payload(
                     collection_name="knowledge_base",
-                    payload={"shared_with": res.get("shared_with", [])},
+                    payload={"shared_with": updated_doc.get("shared_with", [])},
                     points=qmodels.Filter(must=[qmodels.FieldCondition(key="source", match=qmodels.MatchValue(value=name))])
                 )
 

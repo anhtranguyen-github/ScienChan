@@ -28,6 +28,12 @@ export default function WorkspacesPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'name' | 'id'>('name');
 
+    // Fixed RAG Settings for new workspaces
+    const [embeddingProvider, setEmbeddingProvider] = useState('openai');
+    const [chunkSize, setChunkSize] = useState(800);
+    const [chunkOverlap, setChunkOverlap] = useState(150);
+    const [isVaultDeleteChecked, setIsVaultDeleteChecked] = useState(false);
+
     const filteredWorkspaces = workspaces
         .filter(ws =>
             ws.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -46,8 +52,18 @@ export default function WorkspacesPage() {
         if (editingWs) {
             await updateWorkspace(editingWs.id, name, description);
             setEditingWs(null);
+            setIsCreating(false);
         } else {
-            await createWorkspace(name, description);
+            const embeddingDim = embeddingProvider === 'openai' ? 1536 : 768; // Local usually 768
+            await createWorkspace({
+                name,
+                description,
+                embedding_provider: embeddingProvider,
+                embedding_model: embeddingProvider === 'openai' ? 'text-embedding-3-small' : 'sentence-transformers/all-mpnet-base-v2',
+                embedding_dim: embeddingDim,
+                chunk_size: chunkSize,
+                chunk_overlap: chunkOverlap
+            });
             setIsCreating(false);
         }
         setName('');
@@ -280,21 +296,60 @@ export default function WorkspacesPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 pr-2">
-                                        Description (Optional)
-                                    </label>
                                     <textarea
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
                                         placeholder="What is this environment for?"
-                                        rows={4}
+                                        rows={3}
                                         className="w-full bg-[#0a0a0b] border border-white/10 rounded-2xl px-6 py-4 focus:ring-2 ring-indigo-500 outline-none transition-all resize-none placeholder:text-gray-700 font-medium"
                                     />
                                 </div>
 
+                                {!editingWs && (
+                                    <div className="pt-6 border-t border-white/5 space-y-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block">RAG Engine (Fixed on Creation)</label>
+                                            <div className="text-[10px] font-black bg-indigo-500/10 text-indigo-400 px-2 py-1 rounded-md uppercase tracking-tighter border border-indigo-500/20">Immutable Logic</div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">Provider</label>
+                                                <select
+                                                    value={embeddingProvider}
+                                                    onChange={(e) => setEmbeddingProvider(e.target.value)}
+                                                    data-testid="rag-provider-select"
+                                                    className="w-full bg-[#0a0a0b] border border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-indigo-500 outline-none"
+                                                >
+                                                    <option value="openai">OpenAI (1536d)</option>
+                                                    <option value="local">Local (768d)</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">Strategy</label>
+                                                <select
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        if (val === 'standard') { setChunkSize(800); setChunkOverlap(150); }
+                                                        else if (val === 'deep') { setChunkSize(400); setChunkOverlap(100); }
+                                                        else { setChunkSize(1500); setChunkOverlap(200); }
+                                                    }}
+                                                    data-testid="rag-strategy-select"
+                                                    className="w-full bg-[#0a0a0b] border border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 ring-indigo-500 outline-none"
+                                                >
+                                                    <option value="standard">Standard Balance</option>
+                                                    <option value="deep">Deep Analysis (Small)</option>
+                                                    <option value="large">Big Context (Large)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex gap-4 pt-4">
                                     <button
                                         type="submit"
+                                        data-testid="create-workspace-btn"
                                         className="flex-[2] bg-white text-black font-bold py-4 rounded-2xl hover:bg-gray-200 active:scale-95 transition-all shadow-lg"
                                     >
                                         {editingWs ? 'Update Workspace' : 'Create Workspace'}
@@ -362,6 +417,7 @@ export default function WorkspacesPage() {
                                         await deleteWorkspace(deletingWs.id);
                                         setDeletingWs(null);
                                     }}
+                                    data-testid="confirm-delete-ws-btn"
                                     className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-2xl transition-all active:scale-95 shadow-lg shadow-red-600/20"
                                 >
                                     Delete Workspace

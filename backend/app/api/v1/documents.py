@@ -34,8 +34,8 @@ async def get_document(name: str):
     return {"name": name, "content": content}
 
 @router.delete("/documents/{name:path}")
-async def delete_document(name: str, workspace_id: str = "default"):
-    await document_service.delete(name, workspace_id)
+async def delete_document(name: str, workspace_id: str = "default", vault_delete: bool = False):
+    await document_service.delete(name, workspace_id, vault_delete=vault_delete)
     return {"status": "success", "message": f"Document {name} deleted."}
 
 @router.get("/documents/{name:path}/inspect")
@@ -48,9 +48,15 @@ async def update_document_workspaces(request: Request):
     name = data.get("name")
     target_workspace_id = data.get("target_workspace_id")
     action = data.get("action", "share")
+    force_reindex = data.get("force_reindex", False)
     
     if not name or not target_workspace_id:
         raise HTTPException(status_code=400, detail="name and target_workspace_id are required")
         
-    await document_service.update_workspaces(name, target_workspace_id, action)
+    try:
+        await document_service.update_workspaces(name, target_workspace_id, action, force_reindex=force_reindex)
+    except ValueError as e:
+        if "Incompatible Workspace" in str(e):
+             raise HTTPException(status_code=409, detail=str(e)) # 409 Conflict for mismatch
+        raise HTTPException(status_code=400, detail=str(e))
     return {"status": "success", "message": f"Document {name} {action}ed successfully."}

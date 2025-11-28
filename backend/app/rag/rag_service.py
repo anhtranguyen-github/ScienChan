@@ -3,21 +3,20 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from backend.app.providers.embedding import get_embeddings
 
 class RAGService:
-    def __init__(self):
-        # Advanced splitter: recursive character splitting
-        # respects logical boundaries like paragraphs and sentences
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=800,
-            chunk_overlap=150,
+    async def chunk_text(self, text: str, workspace_id: Optional[str] = None) -> List[str]:
+        """Split text into chunks using hierarchical recursive splitting."""
+        from backend.app.core.settings_manager import settings_manager
+        settings = await settings_manager.get_settings(workspace_id)
+        
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=settings.chunk_size,
+            chunk_overlap=settings.chunk_overlap,
             separators=["\n\n", "\n", ". ", "! ", "? ", "; ", " ", ""],
             add_start_index=True
         )
-
-    def chunk_text(self, text: str) -> List[str]:
-        """Split text into chunks using hierarchical recursive splitting."""
         # Clean text first
         text = " ".join(text.split())
-        return self.text_splitter.split_text(text)
+        return splitter.split_text(text)
 
     async def get_embeddings(self, texts: List[str], workspace_id: Optional[str] = None) -> List[List[float]]:
         """Generate embeddings using the flexible provider."""

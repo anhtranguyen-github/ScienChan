@@ -7,10 +7,11 @@ import {
     FileText, Database, Trash2, Share2,
     ExternalLink, Info, Search, Filter,
     ChevronLeft, Layers, MoreHorizontal, Layout,
-    Move, X, Check, Globe
+    Move, X, Check, Globe, ArrowRight, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_ROUTES } from '@/lib/api-config';
 
 export default function DocumentsPage() {
     const { documents, isLoading, deleteDocument, updateWorkspaceAction, inspectDocument } = useDocuments();
@@ -19,39 +20,77 @@ export default function DocumentsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
     const [inspectedPoints, setInspectedPoints] = useState<any[]>([]);
+    const [documentContent, setDocumentContent] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'segments' | 'source'>('segments');
     const [loadingInspect, setLoadingInspect] = useState(false);
     const [actionDoc, setActionDoc] = useState<{ doc: Document, type: 'move' | 'share' } | null>(null);
     const [filterWorkspace, setFilterWorkspace] = useState<string>('all');
     const [filterExtension, setFilterExtension] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [deletingDoc, setDeletingDoc] = useState<Document | null>(null);
+    const [isVaultDeleteChecked, setIsVaultDeleteChecked] = useState(false);
+    const [conflictData, setConflictData] = useState<{ name: string, workspace_id: string, target_id: string, action: 'move' | 'share' | 'unshare', error: string } | null>(null);
 
     const filteredDocs = documents.filter(doc => {
         const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesWorkspace = filterWorkspace === 'all' || doc.workspace_id === filterWorkspace || doc.shared_with.includes(filterWorkspace);
-        const matchesExtension = filterExtension === 'all' || doc.extension.toLowerCase().includes(filterExtension.toLowerCase());
+        const matchesExtension = filterExtension === 'all' || (doc.extension || '').toLowerCase().includes(filterExtension.toLowerCase());
         const matchesStatus = filterStatus === 'all' || (doc.status || 'ready') === filterStatus;
         return matchesSearch && matchesWorkspace && matchesExtension && matchesStatus;
     });
 
-    const extensions = Array.from(new Set(documents.map(d => d.extension.toLowerCase()))).filter(Boolean);
+    const extensions = Array.from(new Set(documents.map(d => (d.extension || '').toLowerCase()))).filter(Boolean);
 
     const handleSelectDoc = async (doc: Document) => {
         setSelectedDoc(doc);
         setLoadingInspect(true);
-        const data = await inspectDocument(doc.name);
-        if (data) setInspectedPoints(data);
-        setLoadingInspect(false);
+        setActiveTab('segments');
+        setDocumentContent(null);
+        setInspectedPoints([]);
+
+        try {
+            const [points, contentData] = await Promise.all([
+                inspectDocument(doc.name),
+                fetch(API_ROUTES.DOCUMENT_GET(doc.name)).then(res => res.ok ? res.json() : null)
+            ]);
+
+            if (points) setInspectedPoints(points);
+            if (contentData) setDocumentContent(contentData.content);
+        } catch (err) {
+            console.error('Failed to load document details:', err);
+        } finally {
+            setLoadingInspect(false);
+        }
     };
 
-    const handleAction = async (targetWsId: string) => {
-        if (!actionDoc) return;
-        const success = await updateWorkspaceAction(
-            actionDoc.doc.name,
-            actionDoc.doc.workspace_id,
+    const handleAction = async (targetWsId: string, force: boolean = false) => {
+        if (!actionDoc && !conflictData) return;
+
+        const docName = actionDoc?.doc.name || conflictData?.name || '';
+        const sourceWs = actionDoc?.doc.workspace_id || conflictData?.workspace_id || '';
+        const actionType = actionDoc?.type || conflictData?.action || 'share';
+
+        const result = await updateWorkspaceAction(
+            docName,
+            sourceWs,
             targetWsId,
-            actionDoc.type
+            actionType,
+            force
         );
-        if (success) setActionDoc(null);
+
+        if (result.success) {
+            setActionDoc(null);
+            setConflictData(null);
+        } else if (result.conflict) {
+            setConflictData({
+                name: docName,
+                workspace_id: sourceWs,
+                target_id: targetWsId,
+                action: actionType,
+                error: result.error || 'Dimension mismatch'
+            });
+            setActionDoc(null);
+        }
     };
 
     return (
@@ -157,7 +196,7 @@ export default function DocumentsPage() {
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.05 }}
-                                            key={doc.name}
+                                            key={`${doc.id || doc.name}-${idx}`}
                                             className="group hover:bg-white/[0.01] border-b border-white/5 transition-all"
                                         >
                                             <td className="px-8 py-6">
@@ -166,7 +205,13 @@ export default function DocumentsPage() {
                                                         <FileText size={20} />
                                                     </div>
                                                     <div>
-                                                        <div className="font-bold text-sm text-gray-200 group-hover:text-white transition-colors uppercase tracking-tight">{doc.name}</div>
+                                                        <div
+                                                            onClick={() => handleSelectDoc(doc)}
+                                                            data-testid="doc-name"
+                                                            className="font-bold text-sm text-gray-200 group-hover:text-indigo-400 transition-colors uppercase tracking-tight cursor-pointer"
+                                                        >
+                                                            {doc.name}
+                                                        </div>
                                                         <div className="text-[10px] text-gray-600 mt-1 uppercase font-black tracking-widest">{doc.extension}</div>
                                                     </div>
                                                 </div>
@@ -231,9 +276,10 @@ export default function DocumentsPage() {
                                                         <Move size={16} />
                                                     </button>
                                                     <button
-                                                        onClick={() => deleteDocument(doc.name, doc.workspace_id)}
-                                                        className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20"
-                                                        title="Delete Global"
+                                                        onClick={() => setDeletingDoc(doc)}
+                                                        data-testid={`delete-doc-${doc.name}`}
+                                                        className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20"
+                                                        title="Delete Operation"
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>
@@ -267,41 +313,52 @@ export default function DocumentsPage() {
                                 <X size={24} />
                             </button>
 
-                            <div className="flex items-center gap-6 mb-12 border-b border-white/5 pb-10">
-                                <div className="w-20 h-20 rounded-[1.5rem] bg-indigo-500/10 flex items-center justify-center text-indigo-400 shadow-xl border border-indigo-500/20">
-                                    <Database size={40} />
+                            <div className="flex items-center gap-6 mb-8 border-b border-white/5 pb-8">
+                                <div className="w-16 h-16 rounded-[1.2rem] bg-indigo-500/10 flex items-center justify-center text-indigo-400 shadow-xl border border-indigo-500/20">
+                                    <Database size={32} />
                                 </div>
-                                <div>
-                                    <div className="flex items-center gap-3 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2 pr-2">
-                                        <span>Document Metadata</span>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">
+                                        <span>Inventory ID: {selectedDoc.workspace_id}</span>
                                         <span className="opacity-20">•</span>
-                                        <span className="text-indigo-400">Vector Storage Active</span>
+                                        <span className="text-indigo-400">Knowledge Asset</span>
                                     </div>
-                                    <h2 className="text-3xl font-black uppercase tracking-tight">{selectedDoc.name}</h2>
-                                    <div className="flex items-center gap-4 mt-2">
-                                        <div className="flex items-center gap-2 text-xs text-gray-400 bg-white/5 px-3 py-1 rounded-lg">
-                                            <Layers size={14} className="text-indigo-400" />
-                                            {selectedDoc.chunks} Points
-                                        </div>
-                                        <div className="flex items-center gap-2 text-xs text-gray-400 bg-white/5 px-3 py-1 rounded-lg">
-                                            <FileText size={14} className="text-purple-400" />
-                                            {selectedDoc.extension.toUpperCase()} Format
-                                        </div>
-                                    </div>
+                                    <h2 className="text-2xl font-black uppercase tracking-tight truncate max-w-2xl">{selectedDoc.name}</h2>
+                                </div>
+
+                                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5">
+                                    <button
+                                        onClick={() => setActiveTab('segments')}
+                                        className={cn(
+                                            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                            activeTab === 'segments' ? "bg-indigo-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-300"
+                                        )}
+                                    >
+                                        Segments
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('source')}
+                                        className={cn(
+                                            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                            activeTab === 'source' ? "bg-indigo-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-300"
+                                        )}
+                                    >
+                                        Source
+                                    </button>
                                 </div>
                             </div>
 
                             {/* Metadata Grid */}
-                            <div className="flex-1 overflow-y-auto pr-4 space-y-6 custom-scrollbar">
+                            <div className="flex-1 overflow-hidden flex flex-col">
                                 {loadingInspect ? (
-                                    <div className="flex flex-col items-center justify-center py-20 grayscale opacity-50">
-                                        <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4" />
-                                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-600">Retrieving Vector Map...</div>
+                                    <div className="flex-1 flex flex-col items-center justify-center grayscale opacity-50">
+                                        <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4" />
+                                        <div className="text-[9px] font-black uppercase tracking-widest text-gray-600">Reconstructing Data Layer...</div>
                                     </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                ) : activeTab === 'segments' ? (
+                                    <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar lg:grid lg:grid-cols-2 gap-4 pb-10">
                                         {inspectedPoints.map((point, i) => (
-                                            <div key={point.id} className="bg-[#0a0a0b]/50 border border-white/5 rounded-[2rem] p-6 text-xs font-mono group">
+                                            <div key={point.id} className="bg-[#0a0a0b]/50 border border-white/5 rounded-[2rem] p-6 text-xs font-mono mb-4 h-fit">
                                                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/5">
                                                     <span className="text-indigo-500 font-bold tracking-tighter">Point ID: {String(point.id).slice(0, 16)}...</span>
                                                     <span className="bg-indigo-500/10 px-2 py-0.5 rounded text-[8px] text-indigo-400 font-black uppercase tracking-widest">
@@ -321,19 +378,19 @@ export default function DocumentsPage() {
                                                             {point.payload.text || 'No text content'}
                                                         </div>
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                                                        <div>
-                                                            <div className="text-[9px] font-black text-gray-700 uppercase tracking-widest mb-1 pr-2">Workspace context</div>
-                                                            <div className="text-indigo-400">{point.payload.workspace_id}</div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-[9px] font-black text-gray-700 uppercase tracking-widest mb-1 pr-2">Chunk Index</div>
-                                                            <div className="text-white">{point.payload.index ?? i}</div>
-                                                        </div>
-                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0b]/50 border border-white/5 rounded-[2rem] p-8">
+                                        <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
+                                            <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Global Asset Buffer</div>
+                                            <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">UTF-8 Encoded</div>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto custom-scrollbar text-sm text-gray-400 leading-relaxed font-mono whitespace-pre-wrap pr-4 pb-10">
+                                            {documentContent || 'No source content available for this document.'}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -400,6 +457,126 @@ export default function DocumentsPage() {
                             >
                                 Cancel
                             </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Document Deletion Confirmation Modal */}
+            <AnimatePresence>
+                {deletingDoc && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setDeletingDoc(null)}
+                            className="absolute inset-0 bg-[#0a0a0b]/90 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                            className="relative w-full max-w-md bg-[#121214] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl"
+                        >
+                            <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mb-6">
+                                <AlertCircle size={32} />
+                            </div>
+                            <h2 className="text-2xl font-black mb-2 uppercase tracking-tight">Delete Document?</h2>
+                            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                                You are removing <span className="text-white font-bold">{deletingDoc.name}</span> from the current workspace context.
+                            </p>
+
+                            <div
+                                onClick={() => setIsVaultDeleteChecked(!isVaultDeleteChecked)}
+                                data-testid="vault-purge-toggle"
+                                className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 mb-8 cursor-pointer hover:bg-white/10 transition-all select-none group"
+                            >
+                                <div className={cn(
+                                    "w-6 h-6 rounded-lg flex items-center justify-center border-2 transition-all",
+                                    isVaultDeleteChecked ? "bg-red-500 border-red-500 text-white" : "border-white/10 text-transparent"
+                                )}>
+                                    <Trash2 size={12} />
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-[10px] font-black uppercase text-gray-400 group-hover:text-white transition-colors">Apply Global Purge</div>
+                                    <div className="text-[9px] text-gray-600">Permanently erase from the central vault storage</div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={async () => {
+                                        await deleteDocument(deletingDoc.name, deletingDoc.workspace_id, isVaultDeleteChecked);
+                                        setDeletingDoc(null);
+                                        setIsVaultDeleteChecked(false);
+                                    }}
+                                    data-testid="confirm-purge-btn"
+                                    className="w-full py-4 rounded-2xl bg-red-600 text-white font-black uppercase tracking-widest hover:bg-red-500 active:scale-95 transition-all shadow-xl shadow-red-600/20"
+                                >
+                                    Confirm Deletion
+                                </button>
+                                <button
+                                    onClick={() => setDeletingDoc(null)}
+                                    className="w-full py-4 rounded-2xl bg-white/5 border border-white/5 text-gray-500 font-bold hover:bg-white/10 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Dimension Conflict / Re-index Modal */}
+            <AnimatePresence>
+                {conflictData && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setConflictData(null)}
+                            className="absolute inset-0 bg-[#0a0a0b]/90 backdrop-blur-xl"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                            className="relative w-full max-w-lg bg-gradient-to-b from-[#1a1a1c] to-[#121214] border border-amber-500/20 rounded-[3rem] p-12 shadow-2xl text-center"
+                        >
+                            <div className="w-24 h-24 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 mx-auto mb-8 border border-amber-500/10">
+                                <Database size={48} />
+                            </div>
+
+                            <div className="inline-block px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-widest mb-6">
+                                Architecture Mismatch Detected
+                            </div>
+
+                            <h2 className="text-3xl font-black mb-4 uppercase tracking-tighter leading-none italic">
+                                Embedding Collision
+                            </h2>
+
+                            <p className="text-gray-400 text-sm mb-10 leading-relaxed font-medium">
+                                The target workspace uses a different embedding model. To enable "{conflictData.name}" here, we must <span className="text-white font-bold">generate a new index</span> optimized for the target's architecture.
+                            </p>
+
+                            <div className="flex flex-col gap-4">
+                                <button
+                                    onClick={() => handleAction(conflictData.target_id, true)}
+                                    className="w-full py-5 rounded-[2rem] bg-indigo-600 text-white font-black uppercase tracking-[0.2em] hover:bg-indigo-500 active:scale-95 transition-all shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-3 group"
+                                >
+                                    Launch Re-index
+                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                </button>
+
+                                <button
+                                    onClick={() => setConflictData(null)}
+                                    className="w-full py-5 rounded-[2rem] bg-white/5 border border-white/5 text-gray-500 font-bold hover:bg-white/10 hover:text-gray-300 transition-all active:scale-95"
+                                >
+                                    Abort Transfer
+                                </button>
+                            </div>
+
+                            <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-center gap-6 opacity-30">
+                                <span className="text-[10px] font-bold uppercase tracking-widest">Qdrant v1.12</span>
+                                <div className="w-1 h-1 rounded-full bg-gray-600" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">Vector isolation active</span>
+                            </div>
                         </motion.div>
                     </div>
                 )}
