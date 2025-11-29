@@ -13,6 +13,18 @@ class SettingsManager:
     def __init__(self, config_path: str = "backend/data/settings.json"):
         self.config_path = Path(config_path)
         self._global_settings: AppSettings = self._load_initial_settings()
+        # Ensure fallback file exists
+        if not self.config_path.exists():
+            self._save_global_settings()
+
+    def _save_global_settings(self):
+        """Save global settings to disk."""
+        try:
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.config_path, "w") as f:
+                json.dump(self._global_settings.model_dump(), f, indent=4)
+        except Exception as e:
+            logger.error(f"Error saving global settings: {e}")
 
     def _load_initial_settings(self) -> AppSettings:
         """Load global settings from JSON, falling back to environment variables."""
@@ -67,9 +79,7 @@ class SettingsManager:
             self._global_settings = AppSettings(**current_data)
             
             # Save to disk
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.config_path, "w") as f:
-                json.dump(self._global_settings.model_dump(), f, indent=4)
+            self._save_global_settings()
             return self._global_settings
         else:
             # Update in MongoDB

@@ -50,12 +50,17 @@ def create_app() -> FastAPI:
     async def startup_event():
         from backend.app.core.minio import minio_manager
         from backend.app.rag.qdrant_provider import qdrant
+        from backend.app.services.workspace_service import workspace_service
         
         logger.info("Initializing Infrastructure...")
         minio_manager.ensure_bucket()
         # Ensure default collections exist (1536 for OpenAI/Deep, 768 for Local/Fast)
-        await qdrant.ensure_collection("knowledge_base_1536", 1536)
-        await qdrant.ensure_collection("knowledge_base_768", 768)
+        await qdrant.create_collection("knowledge_base_1536", 1536)
+        await qdrant.create_collection("knowledge_base_768", 768)
+        
+        # Ensure default workspace exists
+        logger.info("Ensuring default workspace...")
+        await workspace_service.ensure_default_workspace()
         
         logger.info("Infrastructure ready.")
 
