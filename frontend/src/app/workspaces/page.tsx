@@ -226,9 +226,15 @@ export default function WorkspacesPage() {
                                     </button>
 
                                     <button
+                                        disabled={ws.id === "default"}
                                         onClick={() => startEdit(ws)}
-                                        className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all"
-                                        title="Edit"
+                                        className={cn(
+                                            "p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all",
+                                            ws.id === "default"
+                                                ? "opacity-20 cursor-not-allowed"
+                                                : "text-gray-400 hover:text-blue-400"
+                                        )}
+                                        title={ws.id === "default" ? "System workspace cannot be edited" : "Edit"}
                                     >
                                         <Edit3 size={16} />
                                     </button>
