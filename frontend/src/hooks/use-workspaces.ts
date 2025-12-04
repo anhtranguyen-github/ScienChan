@@ -38,9 +38,17 @@ export function useWorkspaces() {
             const found = data.find((ws: Workspace) => ws.id === savedWsId);
             if (found) {
                 setCurrentWorkspace(found);
-            } else if (data.length > 0) {
-                setCurrentWorkspace(data[0]);
-                localStorage.setItem('currentWorkspaceId', data[0].id);
+            } else {
+                // Primary fallback: look for 'default' workspace
+                const defaultWs = data.find((ws: Workspace) => ws.id === 'default');
+                if (defaultWs) {
+                    setCurrentWorkspace(defaultWs);
+                    localStorage.setItem('currentWorkspaceId', defaultWs.id);
+                } else if (data.length > 0) {
+                    // Secondary fallback: first available workspace
+                    setCurrentWorkspace(data[0]);
+                    localStorage.setItem('currentWorkspaceId', data[0].id);
+                }
             }
         } catch (err) {
             console.error('Failed to fetch workspaces:', err);
