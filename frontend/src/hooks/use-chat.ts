@@ -14,16 +14,27 @@ export interface Message {
 
 export function useChat(workspaceId: string = "default") {
     const [messages, setMessages] = useState<Message[]>([]);
-    const [threadId, setThreadId] = useState<string>(() => {
+    const [threadId, setThreadId] = useState<string>('default');
+
+    // Clear messages when workspaceId changes
+    useEffect(() => {
+        setMessages([]);
+    }, [workspaceId]);
+
+    // Initialize or sync threadId from localStorage when workspaceId changes
+    useEffect(() => {
         if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('chat_thread_id');
-            if (saved) return saved;
-            const newId = Math.random().toString(36).substring(7);
-            localStorage.setItem('chat_thread_id', newId);
-            return newId;
+            const storageKey = `chat_thread_id_${workspaceId}`;
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+                setThreadId(saved);
+            } else {
+                const newId = Math.random().toString(36).substring(7);
+                localStorage.setItem(storageKey, newId);
+                setThreadId(newId);
+            }
         }
-        return 'default';
-    });
+    }, [workspaceId]);
     const [isLoading, setIsLoading] = useState(false);
     const { showError } = useError();
 
@@ -52,8 +63,10 @@ export function useChat(workspaceId: string = "default") {
         setMessages([]);
         const newId = Math.random().toString(36).substring(7);
         setThreadId(newId);
-        localStorage.setItem('chat_thread_id', newId);
-    }, []);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(`chat_thread_id_${workspaceId}`, newId);
+        }
+    }, [workspaceId]);
 
     const sendMessage = useCallback(async (content: string) => {
         const userMessage: Message = {

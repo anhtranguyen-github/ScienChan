@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from backend.app.services.workspace_service import workspace_service
@@ -23,11 +23,15 @@ class WorkspaceDetail(Workspace):
 class WorkspaceCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    rag_engine: Literal["basic", "graph"] = "basic"
     embedding_provider: Optional[str] = "openai"
     embedding_model: Optional[str] = "text-embedding-3-small"
     embedding_dim: Optional[int] = 1536
     chunk_size: Optional[int] = 800
     chunk_overlap: Optional[int] = 150
+    neo4j_uri: Optional[str] = None
+    neo4j_user: Optional[str] = None
+    neo4j_password: Optional[str] = None
 
 class WorkspaceUpdate(BaseModel):
     name: Optional[str] = None

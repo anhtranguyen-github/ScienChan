@@ -64,7 +64,6 @@ export function useWorkspaces() {
     const selectWorkspace = (ws: Workspace) => {
         setCurrentWorkspace(ws);
         localStorage.setItem('currentWorkspaceId', ws.id);
-        window.location.reload();
     };
 
     const createWorkspace = async (payload: any) => {

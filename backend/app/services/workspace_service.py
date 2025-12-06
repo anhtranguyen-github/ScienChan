@@ -45,11 +45,15 @@ class WorkspaceService:
         # Initialize Workspace-Specific Fixed RAG Settings
         from backend.app.core.settings_manager import settings_manager
         rag_settings = {
+            "rag_engine": data.get("rag_engine", "basic"),
             "embedding_provider": data.get("embedding_provider", "openai"),
             "embedding_model": data.get("embedding_model", "text-embedding-3-small"),
             "embedding_dim": data.get("embedding_dim", 1536),
             "chunk_size": data.get("chunk_size", 800),
             "chunk_overlap": data.get("chunk_overlap", 150),
+            "neo4j_uri": data.get("neo4j_uri"),
+            "neo4j_user": data.get("neo4j_user"),
+            "neo4j_password": data.get("neo4j_password"),
         }
         await settings_manager.update_settings(rag_settings, workspace_id=ws_id)
         
@@ -80,6 +84,10 @@ class WorkspaceService:
             raise ValueError("The 'default' workspace is a system fallback and cannot be edited.")
             
         db = mongodb_manager.get_async_database()
+
+        # Enforce Immutability of RAG Engine
+        if "rag_engine" in data:
+            del data["rag_engine"]
         
         if "name" in data:
             new_name = data["name"].strip()

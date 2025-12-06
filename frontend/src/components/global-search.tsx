@@ -60,7 +60,7 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
             router.push(`/workspaces/${id}`);
         } else if (type === 'thread') {
             localStorage.setItem('chat_thread_id', id);
-            router.push('/');
+            router.push(`/workspaces/${extra.workspace_id}`);
         } else if (type === 'document') {
             router.push(`/workspaces/${extra.workspace_id}`);
         }
@@ -165,7 +165,7 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                                 {results?.threads.map((thread) => (
                                     <button
                                         key={thread.id}
-                                        onClick={() => navigateTo('thread', thread.id)}
+                                        onClick={() => navigateTo('thread', thread.id, { workspace_id: thread.workspace_id })}
                                         className="w-full flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition-all text-left group"
                                     >
                                         <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
