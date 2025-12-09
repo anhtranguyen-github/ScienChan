@@ -13,113 +13,103 @@ from backend.app.rag.ingestion import ingestion_pipeline
 from backend.app.rag.qdrant_provider import qdrant
 from backend.app.core.minio import minio_manager
 from backend.app.core.mongodb import mongodb_manager
+from backend.app.services.task_service import task_service
 from backend.app.core.schemas import DocumentMetadata
 
 logger = logging.getLogger(__name__)
 
 class DocumentService:
     @staticmethod
-    async def upload(file: UploadFile, workspace_id: str) -> int:
-        """Process and ingest a new document with MinIO + MongoDB + Qdrant."""
+    async def upload(file: UploadFile, workspace_id: str) -> str:
+        """Process and ingest a new document with background task tracking."""
         db = mongodb_manager.get_async_database()
         
-        # 1. Check for name duplicates in MongoDB (more authority than Qdrant now)
+        # 1. Check for name duplicates
         existing_doc = await db.documents.find_one({"workspace_id": workspace_id, "filename": file.filename})
         if existing_doc:
-            raise ValueError(f"Document '{file.filename}' already exists in this workspace.")
+            raise ValueError(f"Document '{file.filename}' already exists.")
 
-        # 2. Read file and calculate hash
         content = await file.read()
-        file_hash = hashlib.sha256(content).hexdigest()
         file_size = len(content)
+        file_type = file.content_type
         
-        # 3. Check for hash duplicate in same workspace
-        duplicate_hash = await db.documents.find_one({"workspace_id": workspace_id, "content_hash": file_hash})
-        if duplicate_hash:
-            logger.info(f"Duplicate content detected for {file.filename} (Hash: {file_hash[:10]}...)")
-            # We could return early or allow rename of same content. 
-            # For now, let's allow it but log it.
-
-        # 4. Initialize metadata
-        doc_id = str(uuid.uuid4())[:8]
-        
-        # Sanitize filename
-        original_filename = file.filename
-        safe_filename = "".join([c if c.isalnum() or c in "._-" else "_" for c in original_filename])
-        if safe_filename != original_filename:
-            logger.info(f"Sanitized filename from {original_filename} to {safe_filename}")
-            
-        extension = os.path.splitext(safe_filename)[1].lower()
-        version = 1
-        timestamp = datetime.utcnow().isoformat()
-        
-        # Path: <workspace_id>/<doc_id>/v<version>/filename
-        minio_path = f"{workspace_id}/{doc_id}/v{version}/{safe_filename}"
-        
-        # 5. Create MongoDB record
-        doc_record = {
-            "id": doc_id,
+        # Create Task
+        task_id = task_service.create_task("ingestion", {
+            "filename": file.filename,
             "workspace_id": workspace_id,
-            "filename": safe_filename,
-            "extension": extension,
-            "minio_path": minio_path,
-            "status": "uploading",
-            "current_version": version,
-            "content_hash": file_hash,
-            "size_bytes": file_size,
-            "chunks": 0,
-            "created_at": timestamp,
-            "updated_at": timestamp,
-            "shared_with": []
-        }
-        await db.documents.insert_one(doc_record)
+            "size": file_size
+        })
+        
+        # We start the background process here technically but we need the FastAPI BackgroundTasks object.
+        # So we'll return both or just the task_id if the router handles the dispatch.
+        return task_id, content, file.filename, file_type
 
-        # 6. Upload to MinIO
+    async def run_ingestion(self, task_id: str, filename: str, content: bytes, content_type: str, workspace_id: str):
+        """Internal method to run the pipeline steps with task updates."""
+        db = mongodb_manager.get_async_database()
         try:
-            await minio_manager.upload_file(
-                minio_path,
-                io.BytesIO(content),
-                file_size,
-                content_type=file.content_type
-            )
-            await db.documents.update_one({"id": doc_id}, {"$set": {"status": "indexing"}})
-        except Exception as e:
-            await db.documents.update_one({"id": doc_id}, {"$set": {"status": "failed"}})
-            logger.error(f"Failed to upload {safe_filename} to MinIO: {e}")
-            raise
-
-        # 7. Ingest to Qdrant
-        suffix = extension
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(content)
-            tmp_path = tmp.name
-
-        try:
-            await ingestion_pipeline.initialize(workspace_id=workspace_id)
-            num_chunks = await ingestion_pipeline.process_file(
-                tmp_path, 
-                metadata={
-                    "filename": safe_filename, 
-                    "workspace_id": workspace_id,
-                    "doc_id": doc_id,
-                    "version": version,
-                    "minio_path": minio_path
-                }
-            )
+            task_service.update_task(task_id, status="processing", progress=10, message="Calculating signatures...")
+            file_hash = hashlib.sha256(content).hexdigest()
+            file_size = len(content)
             
-            # 8. Mark as indexed
-            await db.documents.update_one(
-                {"id": doc_id}, 
-                {"$set": {"status": "indexed", "chunks": num_chunks}}
-            )
-            return num_chunks
+            # Sanitize filename
+            original_filename = filename
+            safe_filename = "".join([c if c.isalnum() or c in "._-" else "_" for c in original_filename])
+            if safe_filename != original_filename:
+                logger.info(f"Sanitized filename from {original_filename} to {safe_filename}")
+
+            doc_id = str(uuid.uuid4())[:8]
+            extension = os.path.splitext(safe_filename)[1].lower()
+            version = 1
+            timestamp = datetime.utcnow().isoformat()
+            minio_path = f"{workspace_id}/{doc_id}/v{version}/{safe_filename}"
+
+            # Create MongoDB record
+            doc_record = {
+                "id": doc_id, "workspace_id": workspace_id, "filename": safe_filename,
+                "extension": extension, "minio_path": minio_path, "status": "uploading",
+                "current_version": version, "content_hash": file_hash, "size_bytes": file_size,
+                "chunks": 0, "created_at": timestamp, "updated_at": timestamp, "shared_with": []
+            }
+            await db.documents.insert_one(doc_record)
+            
+            # MinIO Upload
+            task_service.update_task(task_id, progress=30, message="Storing in vault...")
+            await minio_manager.upload_file(minio_path, io.BytesIO(content), file_size, content_type=content_type)
+            
+            # Qdrant Ingestion
+            task_service.update_task(task_id, progress=50, message="Neural chunking...")
+            await db.documents.update_one({"id": doc_id}, {"$set": {"status": "indexing"}})
+            
+            suffix = extension
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp.write(content)
+                tmp_path = tmp.name
+
+            try:
+                await ingestion_pipeline.initialize(workspace_id=workspace_id)
+                task_service.update_task(task_id, progress=70, message="Generating embeddings...")
+                
+                num_chunks = await ingestion_pipeline.process_file(
+                    tmp_path, 
+                    metadata={
+                        "filename": safe_filename, "workspace_id": workspace_id,
+                        "doc_id": doc_id, "version": version, "minio_path": minio_path
+                    }
+                )
+                
+                await db.documents.update_one({"id": doc_id}, {"$set": {"status": "indexed", "chunks": num_chunks}})
+                task_service.update_task(task_id, status="completed", progress=100, message="Successfully indexed.")
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+                    
         except Exception as e:
-            await db.documents.update_one({"id": doc_id}, {"$set": {"status": "failed"}})
-            logger.error(f"Ingestion failed for {file.filename}: {e}")
-            raise
-        finally:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+            logger.error(f"Background ingestion failed for {filename}: {e}")
+            task_service.update_task(task_id, status="failed", message=str(e))
+            # Also update doc in mongo if it was created
+            await db.documents.update_one({"filename": filename, "workspace_id": workspace_id}, {"$set": {"status": "failed"}})
+
 
     @staticmethod
     async def list_by_workspace(workspace_id: str) -> List[Dict]:

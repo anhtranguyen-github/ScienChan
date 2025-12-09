@@ -1,12 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Trash2, CheckCircle, Loader2, ExternalLink } from 'lucide-react';
+import {
+    Upload, FileText, Trash2, CheckCircle, Loader2,
+    ExternalLink, Database, Search, Share2, Eye,
+    Plus, Filter, Shield
+} from 'lucide-react';
 import Link from 'next/link';
 import { API_ROUTES } from '@/lib/api-config';
 import { SourceViewer } from '@/components/source-viewer';
 import { cn } from '@/lib/utils';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useError } from '@/context/error-context';
 
 interface Document {
@@ -30,6 +34,35 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
     const [isViewing, setIsViewing] = useState(false);
     const [isSharing, setIsSharing] = useState<string | null>(null);
     const [shareTarget, setShareTarget] = useState('');
+    const [activeTasks, setActiveTasks] = useState<any[]>([]);
+
+    // Poll for active tasks
+    useEffect(() => {
+        const pollTasks = async () => {
+            try {
+                const res = await fetch(`${API_ROUTES.TASKS}?type=ingestion`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const pendingTasks = data.tasks.filter((t: any) =>
+                        (t.status === 'pending' || t.status === 'processing') &&
+                        t.metadata.workspace_id === workspaceId
+                    );
+                    setActiveTasks(pendingTasks);
+
+                    // If any task just completed, refresh documents
+                    const hasJustCompleted = data.tasks.some((t: any) => t.status === 'completed' && t.progress === 100);
+                    if (hasJustCompleted) {
+                        fetchDocuments();
+                    }
+                }
+            } catch (err) {
+                console.error('Task polling failed', err);
+            }
+        };
+
+        const interval = setInterval(pollTasks, 2000);
+        return () => clearInterval(interval);
+    }, [workspaceId]);
 
     const fetchDocuments = async () => {
         try {
@@ -58,7 +91,6 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
 
         const formData = new FormData();
         formData.append('file', file);
-        console.log("Uploading file:", file.name);
 
         try {
             const res = await fetch(`${API_ROUTES.UPLOAD}?workspace_id=${encodeURIComponent(workspaceId)}`, {
@@ -66,7 +98,8 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
                 body: formData,
             });
             if (res.ok) {
-                await fetchDocuments();
+                const data = await res.json();
+                // Task is now handled by the polling effect
             } else {
                 const data = await res.json();
                 setError(data.detail || 'Upload failed');
@@ -81,7 +114,6 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
     };
 
     const handleDelete = async (name: string) => {
-        console.log("Deleting document:", name);
         try {
             const res = await fetch(`${API_ROUTES.DOCUMENT_DELETE(name)}?workspace_id=${encodeURIComponent(workspaceId)}`, {
                 method: 'DELETE',
@@ -123,176 +155,273 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
 
     if (isSidebar) {
         return (
-            <div className="flex flex-col gap-2 h-full overflow-hidden">
-                <div className="flex items-center justify-between px-2">
-                    <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white px-3 py-1.5 rounded-lg transition-all border border-white/5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
-                        <Upload size={12} />
-                        Upload
-                        <input type="file" className="hidden" onChange={handleUpload} disabled={isUploading} />
-                    </label>
-                </div>
-
+            <div className="flex flex-col gap-3 h-full overflow-hidden">
                 <div className="flex-1 overflow-y-auto space-y-1 px-1 custom-scrollbar">
                     {documents.map((doc) => (
                         <div
                             key={doc.name}
-                            data-testid={`doc-item-${doc.name}`}
-                            className="group flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-all"
+                            className="group flex items-center justify-between p-2.5 rounded-xl hover:bg-white/5 transition-all relative border border-transparent hover:border-white/5"
                         >
-                            <div className="flex items-center gap-2 overflow-hidden">
-                                <FileText size={14} className="text-gray-600 shrink-0" />
-                                <span className="text-[11px] text-gray-400 truncate">{doc.name}</span>
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <FileText size={14} className="text-gray-600 shrink-0 group-hover:text-indigo-400 transition-colors" />
+                                <span className="text-[11px] text-gray-400 truncate font-medium">{doc.name}</span>
                             </div>
                             <button
                                 onClick={() => handleDelete(doc.name)}
-                                data-testid={`delete-doc-${doc.name}`}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-600 hover:text-red-400"
+                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-600 hover:text-red-400 transition-all active:scale-90"
                             >
                                 <Trash2 size={12} />
                             </button>
                         </div>
                     ))}
                     {documents.length === 0 && !isUploading && (
-                        <div className="text-[10px] text-gray-700 italic px-2">Empty</div>
+                        <div className="flex flex-col items-center justify-center py-10 opacity-20">
+                            <Database size={24} className="mb-2" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-center px-4 leading-relaxed">System Index Empty</span>
+                        </div>
                     )}
+                </div>
+
+                <div className="px-1 py-4 mt-2">
+                    <label className="cursor-pointer group flex items-center justify-center gap-3 h-10 w-full rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-dashed border-white/10 text-gray-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest">
+                        <Plus size={14} className="group-hover:rotate-90 transition-transform" />
+                        Injest Source
+                        <input type="file" className="hidden" onChange={handleUpload} disabled={isUploading} />
+                    </label>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col gap-4 p-4 glass-panel rounded-2xl h-full border border-white/10 overflow-hidden">
-            <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-indigo-400" />
-                        Knowledge Base
-                    </h3>
-                    <label className="cursor-pointer bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white p-2 rounded-xl transition-all border border-white/5 active:scale-95 transition-all">
-                        <Upload className="w-4 h-4" />
+        <div className="flex flex-col gap-6 p-10 bg-[#121214] rounded-[2.5rem] h-full border border-white/10 overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-30" />
+
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shadow-xl shadow-indigo-500/10">
+                        <Database className="w-7 h-7 text-indigo-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black text-white uppercase tracking-tight">Intelligence Vault</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Neural Vector Index</span>
+                            <span className="w-1 h-1 rounded-full bg-gray-700" />
+                            <span className="text-[10px] text-indigo-400 font-mono">{documents.length} ENTITIES</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex gap-2">
+                    <label className="cursor-pointer h-12 px-6 flex items-center gap-3 rounded-2xl bg-white hover:bg-white/90 text-black shadow-xl transition-all active:scale-95 text-[10px] font-black uppercase tracking-widest">
+                        <Upload size={14} />
+                        Upload
                         <input type="file" className="hidden" onChange={handleUpload} disabled={isUploading} />
                     </label>
                 </div>
-
-                <Link
-                    href="/knowledge"
-                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[11px] font-bold uppercase tracking-widest border border-indigo-500/20 transition-all group"
-                >
-                    <ExternalLink size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    Manage Full Access
-                </Link>
             </div>
 
-            {isUploading && (
-                <div className="flex items-center gap-2 text-indigo-300 text-sm animate-pulse bg-indigo-500/10 p-3 rounded-xl border border-indigo-500/20">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing document...
-                </div>
-            )}
-
-            {error && (
-                <div className="text-red-400 text-xs bg-red-500/10 p-2 rounded-lg border border-red-500/20">
-                    {error}
-                </div>
-            )}
-
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                {documents.length === 0 && !isUploading ? (
-                    <div className="text-gray-400 text-sm italic text-center py-8">
-                        No documents uploaded yet.
-                    </div>
-                ) : (
-                    documents.map((doc) => (
-                        <React.Fragment key={doc.name}>
-                            <div
-                                data-testid={`doc-item-${doc.name}`}
-                                className="group flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-indigo-500/30 transition-all hover:bg-white/10"
-                            >
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    <div className="p-2 bg-indigo-500/20 rounded-lg shrink-0">
-                                        <FileText className="w-4 h-4 text-indigo-300" />
+            {(isUploading || activeTasks.length > 0) && (
+                <div className="space-y-3">
+                    {activeTasks.map((task) => (
+                        <motion.div
+                            key={task.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex flex-col gap-3 bg-white/[0.03] p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group"
+                        >
+                            <div className="absolute inset-y-0 left-0 w-1 bg-indigo-500" />
+                            <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                                        <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
                                     </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-sm font-medium text-gray-200 truncate">{doc.name}</span>
-                                        <span className="text-[10px] text-gray-500 uppercase tracking-wider">{doc.chunks} fragments</span>
+                                    <div>
+                                        <div className="text-[10px] font-black text-white uppercase tracking-widest">{task.metadata.filename}</div>
+                                        <div className="text-[9px] text-indigo-400/50 font-bold uppercase mt-0.5">{task.message}</div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-1">
+                                <div className="text-[11px] font-black font-mono text-indigo-400">{task.progress}%</div>
+                            </div>
+                            <div className="w-full bg-white/[0.03] h-1.5 rounded-full overflow-hidden">
+                                <motion.div
+                                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+                                    initial={{ width: "0%" }}
+                                    animate={{ width: `${task.progress}%` }}
+                                    transition={{ duration: 0.5 }}
+                                />
+                            </div>
+                        </motion.div>
+                    ))}
+
+                    {isUploading && activeTasks.length === 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center gap-4 bg-indigo-500/10 p-5 rounded-3xl border border-indigo-500/20"
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                                <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-[10px] font-black text-indigo-300 uppercase tracking-wider mb-1">Streaming to Server...</div>
+                                <div className="w-full bg-indigo-500/10 h-1 rounded-full overflow-hidden">
+                                    <motion.div
+                                        className="h-full bg-indigo-400"
+                                        initial={{ width: "0%" }}
+                                        animate={{ width: "100%" }}
+                                        transition={{ duration: 1, repeat: Infinity }}
+                                    />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+                <AnimatePresence mode="popLayout">
+                    {documents.length === 0 && !isUploading ? (
+                        <div className="flex flex-col items-center justify-center h-full opacity-20">
+                            <div className="w-20 h-20 rounded-[2.5rem] bg-indigo-500/10 flex items-center justify-center mb-6">
+                                <Search size={40} />
+                            </div>
+                            <h4 className="text-sm font-black uppercase tracking-[0.2em] mb-2">Vault Empty</h4>
+                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">No intelligence sources indexed</p>
+                        </div>
+                    ) : (
+                        documents.map((doc, idx) => (
+                            <motion.div
+                                key={doc.name}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className="group flex items-center justify-between p-6 rounded-[2rem] bg-[#0a0a0b] border border-white/5 hover:border-indigo-500/30 transition-all hover:bg-white/[0.02]"
+                            >
+                                <div className="flex items-center gap-6 overflow-hidden">
+                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/5 flex items-center justify-center group-hover:bg-indigo-500/10 transition-colors">
+                                        <FileText className="w-6 h-6 text-gray-600 group-hover:text-indigo-400 transition-colors" />
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-sm font-black text-white truncate max-w-[200px] uppercase tracking-tight">{doc.name}</span>
+                                        <div className="flex items-center gap-3 mt-1">
+                                            <span className="text-[10px] font-mono text-gray-600 uppercase">{doc.extension.replace('.', '')}</span>
+                                            <span className="w-1 h-1 rounded-full bg-gray-800" />
+                                            <span className="text-[10px] text-indigo-400/50 font-black uppercase tracking-widest">{doc.chunks} Fragments</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => handleView(doc.name)}
-                                        className="p-2 text-gray-500 hover:text-indigo-400 transition-colors opacity-0 group-hover:opacity-100"
-                                        disabled={isViewing}
+                                        className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white/5 text-gray-500 hover:text-indigo-400 hover:bg-white/10 transition-all active:scale-90"
+                                        title="View Content"
                                     >
                                         {isViewing && activeSource?.name === doc.name ? (
-                                            <Loader2 size={14} className="animate-spin" />
+                                            <Loader2 size={18} className="animate-spin" />
                                         ) : (
-                                            <FileText size={14} />
+                                            <Eye size={18} />
                                         )}
                                     </button>
+
                                     {!doc.shared && (
                                         <button
                                             onClick={() => setIsSharing(isSharing === doc.name ? null : doc.name)}
                                             className={cn(
-                                                "p-2 transition-all opacity-0 group-hover:opacity-100",
-                                                isSharing === doc.name ? "text-indigo-400" : "text-gray-500 hover:text-indigo-400"
+                                                "w-12 h-12 flex items-center justify-center rounded-2xl transition-all active:scale-90 relative",
+                                                isSharing === doc.name ? "bg-indigo-600 text-white shadow-lg" : "bg-white/5 text-gray-500 hover:text-white"
                                             )}
-                                            title="Share"
+                                            title="Share Access"
                                         >
-                                            <ExternalLink size={14} />
+                                            <Share2 size={18} />
                                         </button>
                                     )}
+
                                     <button
                                         onClick={() => handleDelete(doc.name)}
-                                        data-testid={`delete-doc-${doc.name}`}
-                                        className="p-2 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                                        className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white/5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-90"
+                                        title="Purge Document"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 size={18} />
                                     </button>
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
+                </AnimatePresence>
+            </div>
+
+            <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-[9px] font-black text-emerald-500 uppercase tracking-widest">
+                        <Shield className="w-3 h-3" />
+                        Indexed
+                    </div>
+                    <div className="flex items-center gap-2 text-[9px] font-black text-blue-500 uppercase tracking-widest">
+                        <Filter className="w-3 h-3" />
+                        Hybrid Active
+                    </div>
+                </div>
+
+                <Link
+                    href="/"
+                    className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 hover:text-indigo-400 transition-colors flex items-center gap-2 group"
+                >
+                    System Protocol v1.4
+                    <ArrowRight size={10} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+            </div>
+
+            <AnimatePresence>
+                {isSharing && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-md z-[110]"
+                    >
+                        <div className="mx-4 p-8 bg-[#161619] border border-white/10 rounded-[2rem] shadow-2xl">
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
+                                    <Share2 size={18} />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-black text-white uppercase tracking-widest">External Access Portal</h4>
+                                    <p className="text-[10px] text-gray-500 font-medium">Grant permission to cross-pollinate data.</p>
                                 </div>
                             </div>
 
-                            {isSharing === doc.name && (
-                                <div className="px-3 pb-3 pt-1 animate-in slide-in-from-top-1 duration-200">
-                                    <div className="flex gap-2">
-                                        <input
-                                            placeholder="Target Workspace ID"
-                                            value={shareTarget}
-                                            onChange={(e) => setShareTarget(e.target.value)}
-                                            className="flex-1 bg-[#1a1a1e] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:ring-1 ring-indigo-500 outline-none"
-                                        />
-                                        <button
-                                            onClick={async () => {
-                                                if (!shareTarget) return;
-                                                const res = await fetch(API_ROUTES.WORKSPACE_SHARE(workspaceId), {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ source_name: doc.name, target_workspace_id: shareTarget })
-                                                });
-                                                if (res.ok) {
-                                                    setIsSharing(null);
-                                                    setShareTarget('');
-                                                    alert(`Shared ${doc.name} with ${shareTarget}`);
-                                                }
-                                            }}
-                                            className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold px-3 rounded-lg transition-all"
-                                        >
-                                            Share
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </React.Fragment>
-                    ))
+                            <div className="flex gap-3">
+                                <input
+                                    placeholder="Target ID (e.g. workspace-alpha)"
+                                    value={shareTarget}
+                                    onChange={(e) => setShareTarget(e.target.value)}
+                                    className="flex-1 bg-[#0a0a0b] border border-white/10 rounded-2xl px-5 py-4 text-xs text-white focus:ring-2 ring-indigo-500/20 outline-none placeholder:text-gray-700"
+                                />
+                                <button
+                                    onClick={async () => {
+                                        if (!shareTarget) return;
+                                        const res = await fetch(API_ROUTES.WORKSPACE_SHARE(workspaceId), {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ source_name: isSharing, target_workspace_id: shareTarget })
+                                        });
+                                        if (res.ok) {
+                                            setIsSharing(null);
+                                            setShareTarget('');
+                                            alert(`Permission Granted: ${isSharing} shared with ${shareTarget}`);
+                                        }
+                                    }}
+                                    className="bg-white hover:bg-gray-100 text-black text-[10px] font-black px-8 rounded-2xl transition-all uppercase tracking-widest shadow-lg active:scale-95"
+                                >
+                                    Grant
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
                 )}
-            </div>
 
-            <div className="pt-2 border-t border-white/5">
-                <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                    <CheckCircle className="w-3 h-3 text-green-500" />
-                    Hybrid Search Active
-                </div>
-            </div>
-            <AnimatePresence>
                 {activeSource && (
                     <SourceViewer
                         source={activeSource}
