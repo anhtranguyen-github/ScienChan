@@ -10,6 +10,9 @@ class AppSettings(BaseModel):
     embedding_provider: str = Field(default="openai", description="Embedding Provider (openai, voyage, local)")
     embedding_model: str = Field(default="text-embedding-3-small", description="Embedding model name")
     
+    # Retrieval Engine Selection (IMMUTABLE at workspace creation)
+    rag_engine: Literal["basic", "graph"] = Field(default="basic", description="Selected workspace engine")
+    
     # Retrieval Settings
     retrieval_mode: Literal["hybrid", "vector", "keyword"] = Field(default="hybrid", description="Search strategy")
     search_limit: int = Field(default=5, ge=1, le=20, description="Top-K results")
@@ -19,6 +22,11 @@ class AppSettings(BaseModel):
     chunk_size: int = Field(default=800, ge=100, le=2000)
     chunk_overlap: int = Field(default=150, ge=0, le=500)
     embedding_dim: int = Field(default=1536, description="Fixed dimension for vector consistency")
+    
+    # Neo4j Graph Settings (Used if rag_engine='graph')
+    neo4j_uri: Optional[str] = Field(default=None)
+    neo4j_user: Optional[str] = Field(default=None)
+    neo4j_password: Optional[str] = Field(default=None)
     
     # UI/System Settings
     theme: str = Field(default="dark", description="App theme")
