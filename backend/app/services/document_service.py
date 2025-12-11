@@ -33,18 +33,22 @@ class DocumentService:
         file_size = len(content)
         file_type = file.content_type
         
+        # Sanitize filename immidiately for task tracking
+        original_filename = file.filename
+        safe_filename = "".join([c if c.isalnum() or c in "._-" else "_" for c in original_filename])
+        
         # Create Task
         task_id = task_service.create_task("ingestion", {
-            "filename": file.filename,
+            "filename": safe_filename,
             "workspace_id": workspace_id,
             "size": file_size
         })
         
         # We start the background process here technically but we need the FastAPI BackgroundTasks object.
         # So we'll return both or just the task_id if the router handles the dispatch.
-        return task_id, content, file.filename, file_type
+        return task_id, content, safe_filename, file_type
 
-    async def run_ingestion(self, task_id: str, filename: str, content: bytes, content_type: str, workspace_id: str):
+    async def run_ingestion(self, task_id: str, safe_filename: str, content: bytes, content_type: str, workspace_id: str):
         """Internal method to run the pipeline steps with task updates."""
         db = mongodb_manager.get_async_database()
         try:
@@ -52,12 +56,9 @@ class DocumentService:
             file_hash = hashlib.sha256(content).hexdigest()
             file_size = len(content)
             
-            # Sanitize filename
-            original_filename = filename
-            safe_filename = "".join([c if c.isalnum() or c in "._-" else "_" for c in original_filename])
-            if safe_filename != original_filename:
-                logger.info(f"Sanitized filename from {original_filename} to {safe_filename}")
-
+            # Use provided safe_filename
+            original_filename = safe_filename # already sanitized
+            
             doc_id = str(uuid.uuid4())[:8]
             extension = os.path.splitext(safe_filename)[1].lower()
             version = 1
@@ -105,10 +106,10 @@ class DocumentService:
                     os.remove(tmp_path)
                     
         except Exception as e:
-            logger.error(f"Background ingestion failed for {filename}: {e}")
+            logger.error(f"Background ingestion failed for {safe_filename}: {e}")
             task_service.update_task(task_id, status="failed", message=str(e))
             # Also update doc in mongo if it was created
-            await db.documents.update_one({"filename": filename, "workspace_id": workspace_id}, {"$set": {"status": "failed"}})
+            await db.documents.update_one({"filename": safe_filename, "workspace_id": workspace_id}, {"$set": {"status": "failed"}})
 
 
     @staticmethod
