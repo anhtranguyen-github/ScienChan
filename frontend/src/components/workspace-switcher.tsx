@@ -128,11 +128,11 @@ export function WorkspaceSwitcher({
                                             New Workspace
                                         </button>
                                         <a
-                                            href="/workspaces"
-                                            className="flex items-center gap-2 w-full p-3 rounded-xl hover:bg-white/5 text-xs font-bold text-gray-500 hover:text-white transition-all border-t border-white/5"
+                                            href="/"
+                                            className="flex items-center gap-2 w-full p-3 rounded-xl hover:bg-white/5 text-xs font-bold text-gray-400 hover:text-white transition-all border-t border-white/5"
                                         >
-                                            <Settings size={14} />
-                                            Manage Workspaces
+                                            <Layout size={14} />
+                                            Select Workspace
                                         </a>
                                     </div>
                                 )}

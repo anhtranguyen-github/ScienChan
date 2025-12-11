@@ -1,348 +1,421 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useWorkspaces, WorkspaceDetail } from '@/hooks/use-workspaces';
-import {
-    Layout, ChevronLeft, Database, MessageSquare,
-    FileText, ExternalLink, Clock, Calendar, BarChart3, Search,
-    Trash2, AlertCircle, X
-} from 'lucide-react';
+import { useChat, Message } from '@/hooks/use-chat';
+import { useSettings } from '@/hooks/use-settings';
+import { useThreads } from '@/hooks/use-threads';
+import { useWorkspaces } from '@/hooks/use-workspaces';
 import { cn } from '@/lib/utils';
+import {
+    Send, Cpu, Loader2, Wrench, Bot, Trash2, User, Hammer,
+    Settings as SettingsIcon, Lightbulb, LightbulbOff,
+    Plus, ChevronDown, ChevronRight, MessageSquare, Database, Edit3, Search,
+    ChevronLeft
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useDocuments } from '@/hooks/use-documents';
+import { KnowledgeBase } from '@/components/knowledge-base';
+import { ToolsManager } from '@/components/tools-manager';
+import { SettingsManager } from '@/components/settings-manager';
+import { ChatMessage } from '@/components/chat-message';
+import { SourceViewer } from '@/components/source-viewer';
+import { WorkspaceSwitcher } from '@/components/workspace-switcher';
+import { useGlobalSearch } from '@/context/search-context';
 
-export default function WorkspaceDetailPage() {
+export default function WorkspaceChatPage() {
     const params = useParams();
     const router = useRouter();
     const workspaceId = params.id as string;
 
-    const { getWorkspaceDetails, selectWorkspace } = useWorkspaces();
-    const [viewingWs, setViewingWs] = useState<WorkspaceDetail | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const { deleteDocument } = useDocuments();
-    const [deletingDoc, setDeletingDoc] = useState<any | null>(null);
-    const [isVaultDeleteChecked, setIsVaultDeleteChecked] = useState(false);
+    const { workspaces, currentWorkspace, selectWorkspace, createWorkspace, isLoading: workspacesLoading } = useWorkspaces();
+
+    const { messages, isLoading, sendMessage, clearChat, threadId, setThreadId } = useChat(workspaceId);
+    const { threads, refreshThreads, updateThreadTitle, deleteThread } = useThreads(workspaceId);
+    const { settings, updateSettings } = useSettings();
+    const { toggleSearch } = useGlobalSearch();
+    const [input, setInput] = useState('');
+    const [showTools, setShowTools] = useState(false);
+    const [settingsContext, setSettingsContext] = useState<{ id?: string; name?: string } | null>(null);
+    const [activeSource, setActiveSource] = useState<{ id: number; name: string; content: string } | null>(null);
+    const [notification, setNotification] = useState<{ message: string; type: 'error' | 'info' } | null>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        async function load() {
-            if (workspaceId) {
-                const details = await getWorkspaceDetails(workspaceId);
-                setViewingWs(details);
-                setIsLoading(false);
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
+
+    useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    // If the workspace in URL is different from current selected workspace, sync them
+    useEffect(() => {
+        if (workspaceId && currentWorkspace && currentWorkspace.id !== workspaceId) {
+            const found = workspaces.find(w => w.id === workspaceId);
+            if (found) {
+                // We don't want to reload the page here, just update the state if possible
+                // But selectWorkspace currently reloads.
+                // For now, let's just make sure the hooks use workspaceId correctly (which they do).
             }
         }
-        load();
-    }, [workspaceId, getWorkspaceDetails]);
+    }, [workspaceId, currentWorkspace, workspaces]);
 
-    if (isLoading) {
+    if (workspacesLoading) {
         return (
-            <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-            </div>
-        );
-    }
-
-    if (!viewingWs) {
-        return (
-            <div className="min-h-screen bg-[#0a0a0b] flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-20 h-20 rounded-3xl bg-red-500/10 flex items-center justify-center text-red-500 mb-6">
-                    <Layout size={40} />
+            <div className="h-screen w-screen bg-[#0a0a0b] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+                    <span className="text-gray-500 text-sm font-medium animate-pulse">Initializing System...</span>
                 </div>
-                <h2 className="text-2xl font-bold mb-2">Workspace Not Found</h2>
-                <p className="text-gray-500 mb-8">The workspace you are looking for does not exist or has been deleted.</p>
-                <button
-                    onClick={() => router.push('/workspaces')}
-                    className="px-6 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold"
-                >
-                    Back to Workspaces
-                </button>
             </div>
         );
     }
 
-    const filteredThreads = viewingWs.threads.filter(t =>
-        t.title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim() || isLoading) return;
+        sendMessage(input);
+        setInput('');
+        setTimeout(refreshThreads, 1000);
+    };
 
-    const filteredDocs = viewingWs.documents.filter(d =>
-        d.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const handleNewChat = () => {
+        clearChat();
+        refreshThreads();
+    };
+
+    const selectThread = (id: string) => {
+        setThreadId(id);
+        localStorage.setItem(`chat_thread_id_${workspaceId}`, id);
+    };
+
+    const handleCitationClick = (id: number, message: Message) => {
+        const source = message.sources?.find(s => s.id === id);
+        if (source) {
+            setActiveSource(source);
+        } else {
+            setNotification({
+                message: `Citation [${id}] content is no longer available in history metadata.`,
+                type: 'error'
+            });
+        }
+    };
+
+    const toggleThinkingMode = async () => {
+        if (!settings) return;
+        await updateSettings({ show_reasoning: !settings.show_reasoning });
+    };
 
     return (
-        <div className="min-h-screen bg-[#0a0a0b] text-white font-sans selection:bg-indigo-500/30">
-            {/* Ambient Background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/5 blur-[120px] rounded-full" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/5 blur-[120px] rounded-full" />
-            </div>
-
-            <div className="relative max-w-7xl mx-auto px-6 py-12">
-                {/* Breadcrumbs & Actions */}
-                <div className="flex items-center justify-between mb-12">
-                    <div className="flex items-center gap-6">
-                        <button
-                            onClick={() => router.push('/workspaces')}
-                            className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-gray-400 hover:text-white"
-                        >
-                            <ChevronLeft size={20} />
-                        </button>
-                        <div>
-                            <div className="flex items-center gap-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 pr-2">
-                                <span>Workspaces</span>
-                                <span className="opacity-30">/</span>
-                                <span className="text-indigo-400">{viewingWs.id}</span>
+        <div className="flex h-screen bg-[#0a0a0b] text-white overflow-hidden font-sans">
+            <aside className="w-72 bg-[#121214] border-r border-white/5 flex flex-col overflow-hidden">
+                <div className="p-4 flex flex-col gap-4">
+                    <div className="flex items-center justify-between px-2">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => router.push('/')}
+                                className="p-2 -ml-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-all"
+                                title="Back to Workspaces"
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+                            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                                <Cpu size={18} className="text-white" />
                             </div>
-                            <h1 className="text-4xl font-black tracking-tight">{viewingWs.name}</h1>
+                            <span className="text-sm font-bold tracking-tight text-white">Architect</span>
                         </div>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={toggleSearch}
+                                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
+                                title="Global Search (⌘K)"
+                            >
+                                <Search size={18} />
+                            </button>
+                            <button
+                                onClick={handleNewChat}
+                                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
+                                title="New Chat"
+                            >
+                                <Plus size={18} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <WorkspaceSwitcher
+                        workspaces={workspaces}
+                        currentWorkspace={currentWorkspace}
+                        onSelect={(ws) => {
+                            selectWorkspace(ws);
+                            router.push(`/workspaces/${ws.id}`);
+                        }}
+                        onCreate={createWorkspace}
+                    />
+                </div>
+
+                <div className="flex-1 flex flex-col overflow-hidden px-3 mt-2">
+                    <div className="flex flex-col min-h-0 py-2">
+                        <div className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                            Recent Chats
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-0.5 mt-1">
+                            {threads.length === 0 ? (
+                                <div className="px-3 py-3 text-[11px] text-gray-600 italic">No recent chats</div>
+                            ) : (
+                                threads.map((thread) => (
+                                    <div
+                                        key={thread.id}
+                                        className={cn(
+                                            "flex flex-col group px-1",
+                                            threadId === thread.id ? "bg-white/10 rounded-xl border border-white/10 shadow-lg" : "hover:bg-white/[0.02] rounded-xl transition-all"
+                                        )}
+                                    >
+                                        <div className="flex items-center">
+                                            <button
+                                                onClick={() => selectThread(thread.id)}
+                                                className="flex items-center gap-3 flex-1 px-3 py-2.5 text-left overflow-hidden"
+                                            >
+                                                <MessageSquare size={14} className={cn(threadId === thread.id ? "text-blue-400" : "text-gray-600")} />
+                                                <span className={cn(
+                                                    "text-xs truncate flex-1",
+                                                    threadId === thread.id ? "text-white font-medium" : "text-gray-400 font-normal"
+                                                )}>
+                                                    {thread.title}
+                                                </span>
+                                            </button>
+
+                                            <div className="flex items-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm('Delete?')) deleteThread(thread.id);
+                                                    }}
+                                                    className="p-1 hover:text-red-400 text-gray-600"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col min-h-0 py-2 mt-4 border-t border-white/5">
+                        <div className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest flex justify-between items-center">
+                            <span>Knowledge Base</span>
+                        </div>
+
+                        <div className="flex-1 min-h-0 mt-1 overflow-hidden">
+                            <KnowledgeBase workspaceId={workspaceId} isSidebar={true} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-4 bg-[#0a0a0b]/50 border-t border-white/5">
+                    <div className="flex items-center justify-between gap-2 p-3 bg-white/5 rounded-2xl border border-white/5 group">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                                JD
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-white">Developer</span>
+                                <span className="text-[10px] text-gray-500">Pro Plan</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => setShowTools(true)}
+                                className="p-1.5 text-gray-500 hover:text-green-400 transition-colors"
+                                title="Manage Tools"
+                            >
+                                <Hammer size={14} />
+                            </button>
+                            <button
+                                onClick={() => setSettingsContext({ id: workspaceId, name: currentWorkspace?.name })}
+                                className="p-1.5 text-gray-500 hover:text-blue-400 transition-colors"
+                                title="Workspace Settings"
+                            >
+                                <SettingsIcon size={14} />
+                            </button>
+                            <button
+                                onClick={() => setSettingsContext({})}
+                                className="p-1.5 text-gray-500 hover:text-purple-400 transition-colors"
+                                title="Global Settings"
+                            >
+                                <Wrench size={14} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <main className="flex-1 flex flex-col relative">
+                <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full -z-10" />
+                <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full -z-10" />
+
+                <header className="h-20 border-b border-white/5 flex items-center px-8 justify-between backdrop-blur-md sticky top-0 z-10 bg-[#0a0a0b]/50">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <h2 className="text-lg font-semibold">{currentWorkspace?.name || 'Loading...'}</h2>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <div className="relative group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-indigo-400 transition-colors" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Search project assets..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="bg-[#121214] border border-white/5 rounded-2xl pl-12 pr-6 py-3 w-64 focus:w-80 outline-none focus:ring-2 ring-indigo-500/20 transition-all placeholder:text-gray-700 text-sm"
-                            />
-                        </div>
                         <button
-                            onClick={() => {
-                                selectWorkspace(viewingWs);
-                                router.push('/');
-                            }}
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 active:scale-95 flex items-center gap-2"
+                            onClick={toggleThinkingMode}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all active:scale-95 text-[10px] font-bold uppercase tracking-wider",
+                                settings?.show_reasoning
+                                    ? "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)]"
+                                    : "bg-white/5 border-white/10 text-gray-500"
+                            )}
+                            title={settings?.show_reasoning ? "AI is in Deep Reasoning mode" : "AI is in Fast response mode"}
                         >
-                            <ExternalLink size={18} />
-                            Open Workspace
+                            <div className={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                settings?.show_reasoning ? "bg-amber-500 animate-pulse" : "bg-gray-600"
+                            )} />
+                            <span>{settings?.show_reasoning ? "Reasoning: Active" : "Reasoning: Off"}</span>
                         </button>
                     </div>
-                </div>
+                </header>
 
-                {/* Stats Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-                    {[
-                        { label: 'Conversations', value: viewingWs.threads.length, icon: MessageSquare, color: 'text-indigo-400', bg: 'bg-indigo-400/10' },
-                        { label: 'Documents', value: viewingWs.documents.length, icon: Database, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-                        { label: 'Usage Score', value: '88%', icon: BarChart3, color: 'text-amber-400', bg: 'bg-amber-400/10' },
-                        { label: 'Created At', value: 'Feb 2026', icon: Calendar, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
-                    ].map((stat, i) => (
-                        <div key={stat.label} className="bg-[#121214] border border-white/5 p-6 rounded-[2rem] flex items-center gap-5">
-                            <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center", stat.bg)}>
-                                <stat.icon size={24} className={stat.color} />
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{stat.label}</div>
-                                <div className="text-2xl font-black">{stat.value}</div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[600px]">
-                    {/* Left Col: Description & Info */}
-                    <div className="space-y-8">
-                        <section className="bg-[#121214] border border-white/5 p-8 rounded-[2.5rem] h-full">
-                            <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
-                                <Layout size={20} className="text-gray-500" />
-                                Project Manifest
-                            </h3>
-                            <div className="space-y-6">
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth">
+                    <AnimatePresence initial={false}>
+                        {messages.length === 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex flex-col items-center justify-center h-full text-center space-y-6 max-w-2xl mx-auto"
+                            >
+                                <div className="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center border border-white/10">
+                                    <Bot size={40} className="text-blue-500" />
+                                </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest block mb-2">Description</label>
-                                    <p className="text-gray-400 leading-relaxed italic">
-                                        {viewingWs.description || "No project manifest provided. This workspace serves as a standard sandbox environment."}
+                                    <h1 className="text-4xl font-bold mb-2 tracking-tight">AI Reasoning Engine</h1>
+                                    <p className="text-gray-400 leading-relaxed text-lg">
+                                        {currentWorkspace?.description || 'Upload documents to the Knowledge Base to enable context-aware retrieval and advanced reasoning.'}
                                     </p>
                                 </div>
-                                <div className="pt-6 border-t border-white/5">
-                                    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest block mb-3">Workspace Meta</label>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-gray-500">Kernel ID</span>
-                                            <code className="text-indigo-400">{viewingWs.id}</code>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-gray-500">Security Scope</span>
-                                            <span className="text-emerald-500 font-bold">Encrypted</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-gray-500">Persistence</span>
-                                            <span className="text-gray-300">Long-term</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
-
-                    {/* Right Col: Lists */}
-                    <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Threads List */}
-                        <div className="bg-[#121214] border border-white/5 rounded-[2.5rem] flex flex-col overflow-hidden">
-                            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                                <div className="flex items-center gap-3">
-                                    <MessageSquare size={20} className="text-indigo-400" />
-                                    <h3 className="font-bold text-xl">Threads</h3>
-                                </div>
-                                <span className="text-[10px] font-bold bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full">{filteredThreads.length}</span>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                                {filteredThreads.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-gray-700 italic">
-                                        <p>No matches found</p>
-                                    </div>
-                                ) : (
-                                    filteredThreads.map((thread) => (
-                                        <motion.div
-                                            key={thread.id}
-                                            whileHover={{ x: 4 }}
-                                            className="p-5 rounded-3xl bg-white/5 hover:bg-indigo-500/10 border border-white/5 hover:border-indigo-500/20 transition-all group cursor-pointer"
-                                            onClick={() => {
-                                                selectWorkspace(viewingWs);
-                                                localStorage.setItem('chat_thread_id', thread.id);
-                                                router.push('/');
-                                            }}
+                                <div className="grid grid-cols-2 gap-4 w-full">
+                                    {['Research the uploaded paper', 'Summarize key findings', 'Compare methodologies', 'Extract technical specs'].map((tip) => (
+                                        <button
+                                            key={tip}
+                                            onClick={() => sendMessage(tip)}
+                                            className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all text-sm text-left text-gray-300"
                                         >
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex-1 min-w-0">
-                                                    <span className="text-sm font-bold truncate block group-hover:text-indigo-400 transition-colors uppercase pr-2 tracking-tight">{thread.title}</span>
-                                                    <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-500 font-medium">
-                                                        <Clock size={12} />
-                                                        <span>{thread.last_active ? new Date(thread.last_active).toLocaleDateString() : 'Active now'}</span>
-                                                    </div>
-                                                    {thread.tags && thread.tags.length > 0 && (
-                                                        <div className="flex flex-wrap gap-2 mt-3">
-                                                            {thread.tags.map((tag: string) => (
-                                                                <span key={tag} className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase font-black tracking-tighter">
-                                                                    {tag}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="p-2 rounded-xl bg-white/5 text-gray-700 group-hover:text-indigo-400 transition-colors">
-                                                    <ExternalLink size={14} />
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Documents List */}
-                        <div className="bg-[#121214] border border-white/5 rounded-[2.5rem] flex flex-col overflow-hidden">
-                            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                                <div className="flex items-center gap-3">
-                                    <Database size={20} className="text-purple-400" />
-                                    <h3 className="font-bold text-xl">Resources</h3>
+                                            {tip}
+                                        </button>
+                                    ))}
                                 </div>
-                                <span className="text-[10px] font-bold bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full">{filteredDocs.length}</span>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                                {filteredDocs.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-gray-700 italic">
-                                        <p>Resource bank empty</p>
-                                    </div>
-                                ) : (
-                                    filteredDocs.map((doc, idx) => (
-                                        <motion.div
-                                            key={doc.id || idx}
-                                            whileHover={{ x: 4 }}
-                                            className="p-5 rounded-3xl bg-white/5 border border-white/5 flex items-center gap-5 hover:border-purple-500/20 transition-all group"
-                                        >
-                                            <div className="w-12 h-12 rounded-2xl bg-purple-500/5 group-hover:bg-purple-500/10 flex items-center justify-center text-purple-400/50 group-hover:text-purple-400 transition-all">
-                                                <FileText size={24} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-bold truncate tracking-tight uppercase">{doc.name}</div>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-md">
-                                                        {doc.extension?.toUpperCase() || "DATA"}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setDeletingDoc(doc);
-                                                }}
-                                                className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/10 text-gray-700 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </motion.div>
-                                    ))
-                                )}
-                            </div>
+                            </motion.div>
+                        )}
+
+                        {messages.map((message) => (
+                            <ChatMessage
+                                key={message.id}
+                                message={message}
+                                showReasoning={settings?.show_reasoning}
+                                isLoading={isLoading && message.id === messages[messages.length - 1].id}
+                                onCitationClick={(id) => handleCitationClick(id, message)}
+                            />
+                        ))}
+
+                        {isLoading && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="flex items-start gap-5 max-w-4xl mx-auto"
+                            >
+                                <div className="w-10 h-10 rounded-2xl bg-[#1e1e21] border border-white/10 flex items-center justify-center">
+                                    <Bot size={20} className="text-blue-500" />
+                                </div>
+                                <div className="p-6 rounded-3xl bg-white/5 border border-white/5 flex items-center gap-3">
+                                    <Loader2 size={18} className="animate-spin text-blue-500" />
+                                    <span className="text-sm font-medium text-gray-400">Architect is thinking...</span>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                <div className="p-10 bg-gradient-to-t from-[#0a0a0b] via-[#0a0a0b]/90 to-transparent">
+                    <form
+                        onSubmit={handleSubmit}
+                        className="max-w-4xl mx-auto relative group"
+                    >
+                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-[2rem] blur opacity-20 group-focus-within:opacity-40 transition duration-500" />
+                        <div className="relative flex items-center bg-[#161619] border border-white/10 rounded-[1.8rem] p-2 pr-4 shadow-2xl">
+                            <input
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                placeholder="Message AI Architect..."
+                                className="flex-1 bg-transparent border-none focus:ring-0 py-4 px-6 text-[15px] placeholder:text-gray-500"
+                            />
+                            <button
+                                type="submit"
+                                aria-label="Send message"
+                                disabled={isLoading || !input.trim()}
+                                className="w-12 h-12 rounded-2xl bg-white text-[#0a0a0b] flex items-center justify-center hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all shadow-xl"
+                            >
+                                <Send size={20} />
+                            </button>
                         </div>
+                    </form>
+                    <div className="text-center mt-4 text-[11px] text-gray-500 font-medium tracking-wide">
+                        Powered by LangGraph & Qdrant Engine
                     </div>
                 </div>
-            </div>
-
-            {/* Document Deletion Modal */}
+            </main>
             <AnimatePresence>
-                {deletingDoc && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            onClick={() => setDeletingDoc(null)}
-                            className="absolute inset-0 bg-[#0a0a0b]/90 backdrop-blur-md"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                            className="relative w-full max-w-md bg-[#121214] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl"
-                        >
-                            <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mb-6">
-                                <AlertCircle size={32} />
-                            </div>
-                            <h2 className="text-2xl font-black mb-2 uppercase tracking-tight">Erase Resource?</h2>
-                            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-                                You are removing <span className="text-white font-bold">{deletingDoc.name}</span> from this environment.
-                            </p>
+                {showTools && (
+                    <ToolsManager
+                        key="tools-modal"
+                        onClose={() => setShowTools(false)}
+                    />
+                )}
+                {settingsContext !== null && (
+                    <SettingsManager
+                        key="settings-modal"
+                        workspaceId={settingsContext.id}
+                        workspaceName={settingsContext.name}
+                        onClose={() => setSettingsContext(null)}
+                    />
+                )}
+                {activeSource && (
+                    <SourceViewer
+                        key="source-viewer-modal"
+                        source={activeSource}
+                        onClose={() => setActiveSource(null)}
+                    />
+                )}
 
-                            <div
-                                onClick={() => setIsVaultDeleteChecked(!isVaultDeleteChecked)}
-                                className="flex items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 mb-8 cursor-pointer hover:bg-white/10 transition-all select-none group"
-                            >
-                                <div className={cn(
-                                    "w-6 h-6 rounded-lg flex items-center justify-center border-2 transition-all",
-                                    isVaultDeleteChecked ? "bg-red-500 border-red-500 text-white" : "border-white/10 text-transparent"
-                                )}>
-                                    <Trash2 size={12} />
-                                </div>
-                                <div className="text-left">
-                                    <div className="text-[10px] font-black uppercase text-gray-400 group-hover:text-white transition-colors">Wipe from Global Vault</div>
-                                    <div className="text-[9px] text-gray-600">Permanently delete from storage and vector bank</div>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                                <button
-                                    onClick={async () => {
-                                        await deleteDocument(deletingDoc.name, workspaceId, isVaultDeleteChecked);
-                                        setDeletingDoc(null);
-                                        setIsVaultDeleteChecked(false);
-                                        // Refresh UI
-                                        const details = await getWorkspaceDetails(workspaceId);
-                                        setViewingWs(details);
-                                    }}
-                                    className="w-full py-4 rounded-2xl bg-red-600 text-white font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl shadow-red-600/20"
-                                >
-                                    Confirm Removal
-                                </button>
-                                <button
-                                    onClick={() => setDeletingDoc(null)}
-                                    className="w-full py-4 rounded-2xl bg-white/5 border border-white/5 text-gray-500 font-bold hover:bg-white/10 transition-all"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
+                {notification && (
+                    <motion.div
+                        key="notification-toast"
+                        initial={{ opacity: 0, y: 50, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, x: '-50%' }}
+                        exit={{ opacity: 0, y: 20, x: '-50%' }}
+                        className={cn(
+                            "fixed bottom-32 left-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl border text-sm font-medium flex items-center gap-3",
+                            notification.type === 'error'
+                                ? "bg-red-500/10 border-red-500/20 text-red-400"
+                                : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                        )}
+                    >
+                        <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            notification.type === 'error' ? "bg-red-500" : "bg-blue-500"
+                        )} />
+                        {notification.message}
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
