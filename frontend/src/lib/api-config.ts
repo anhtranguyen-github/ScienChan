@@ -28,6 +28,6 @@ export const API_ROUTES = {
     WORKSPACE_STATS: (id: string) => `${API_BASE_URL}/workspaces/${encodeURIComponent(id)}/details`,
     WORKSPACE_SHARE: (id: string) => `${API_BASE_URL}/workspaces/${encodeURIComponent(id)}/share-document`,
     SEARCH: `${API_BASE_URL}/search`,
-    TASKS: `${API_BASE_URL}/tasks`,
+    TASKS: `${API_BASE_URL}/tasks/`,
     TASK_STATUS: (id: string) => `${API_BASE_URL}/tasks/${encodeURIComponent(id)}`,
 };
