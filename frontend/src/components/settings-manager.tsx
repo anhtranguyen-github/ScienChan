@@ -1,7 +1,14 @@
+'use client';
+
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, Settings, Cpu, Search, Layout, Save, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    X, Settings, Cpu, Search, Layout, Save,
+    Loader2, Brain, Database, Shield, Zap,
+    ArrowRight, Check, Sliders, Server
+} from 'lucide-react';
 import { useSettings, AppSettings } from '@/hooks/use-settings';
+import { cn } from '@/lib/utils';
 
 export function SettingsManager({ onClose, workspaceId, workspaceName }: { onClose: () => void, workspaceId?: string, workspaceName?: string }) {
     const { settings, updateSettings, isLoading } = useSettings(workspaceId);
@@ -11,8 +18,11 @@ export function SettingsManager({ onClose, workspaceId, workspaceName }: { onClo
 
     if (isLoading || !settings) {
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0a0a0b]/80 backdrop-blur-xl">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+                    <span className="text-gray-500 text-xs font-bold uppercase tracking-widest animate-pulse">Syncing Kernel Settings...</span>
+                </div>
             </div>
         );
     }
@@ -26,7 +36,7 @@ export function SettingsManager({ onClose, workspaceId, workspaceName }: { onClo
             setLocalSettings({});
             onClose();
         } catch (err) {
-            alert('Failed to save settings');
+            console.error('Save failed', err);
         } finally {
             setIsSaving(false);
         }
@@ -36,182 +46,351 @@ export function SettingsManager({ onClose, workspaceId, workspaceName }: { onClo
         setLocalSettings(prev => ({ ...prev, [key]: value }));
     };
 
+    const tabs = [
+        { id: 'llm', label: 'Intelligence', icon: Brain, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+        { id: 'retrieval', label: 'Retrieval', icon: Database, color: 'text-indigo-400', bg: 'bg-indigo-400/10' },
+        { id: 'system', label: 'Interface', icon: Sliders, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+    ];
+
     return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-        >
-            <div className="bg-[#121214] border border-white/10 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[600px]">
-                {/* Header */}
-                <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                            <Settings className="text-blue-400 w-5 h-5" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 lg:p-8">
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={onClose}
+                className="absolute inset-0 bg-[#0a0a0b]/90 backdrop-blur-md"
+            />
+
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative bg-[#121214] border border-white/10 w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col h-[700px] max-h-[90vh]"
+            >
+                {/* Header Decoration */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-50" />
+
+                {/* Top Bar */}
+                <div className="px-10 py-8 flex items-center justify-between border-b border-white/5 bg-white/[0.01]">
+                    <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-xl shadow-indigo-600/20">
+                            <Settings className="text-white w-7 h-7" />
                         </div>
-                        <h2 className="text-xl font-bold text-white">
-                            {workspaceName ? `${workspaceName} Settings` : 'Application Settings'}
-                        </h2>
+                        <div>
+                            <h2 className="text-2xl font-black text-white tracking-tight uppercase">
+                                {workspaceName ? workspaceName : 'Core System'}
+                            </h2>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Parameter Configuration</span>
+                                <span className="w-1 h-1 rounded-full bg-gray-700" />
+                                <code className="text-[10px] text-indigo-400 font-mono">ID: {workspaceId || 'GLOBAL'}</code>
+                            </div>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
-                        <X className="w-6 h-6 text-gray-400" />
+                    <button
+                        onClick={onClose}
+                        className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5 active:scale-90"
+                    >
+                        <X size={20} />
                     </button>
                 </div>
 
                 <div className="flex flex-1 min-h-0">
-                    {/* Sidebar Tabs */}
-                    <div className="w-48 border-r border-white/5 p-4 flex flex-col gap-2">
-                        <button
-                            onClick={() => setActiveTab('llm')}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'llm' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'hover:bg-white/5 text-gray-400'}`}
-                        >
-                            <Cpu size={18} />
-                            <span className="text-sm font-medium">Models</span>
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('retrieval')}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'retrieval' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'hover:bg-white/5 text-gray-400'}`}
-                        >
-                            <Search size={18} />
-                            <span className="text-sm font-medium">Retrieval</span>
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('system')}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'system' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'hover:bg-white/5 text-gray-400'}`}
-                        >
-                            <Layout size={18} />
-                            <span className="text-sm font-medium">System</span>
-                        </button>
+                    {/* Navigation Sidebar */}
+                    <div className="w-64 border-r border-white/5 p-6 flex flex-col gap-3 bg-white/[0.01]">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as any)}
+                                className={cn(
+                                    "group flex items-center gap-4 px-5 py-4 rounded-2xl transition-all relative overflow-hidden",
+                                    activeTab === tab.id
+                                        ? "bg-white text-black shadow-xl"
+                                        : "hover:bg-white/5 text-gray-500 hover:text-white"
+                                )}
+                            >
+                                <tab.icon size={20} className={cn("shrink-0", activeTab === tab.id ? "text-black" : tab.color)} />
+                                <span className="text-xs font-black uppercase tracking-widest">{tab.label}</span>
+                                {activeTab === tab.id && (
+                                    <motion.div
+                                        layoutId="activeTabGlow"
+                                        className="absolute inset-0 bg-white opacity-10 blur-xl"
+                                    />
+                                )}
+                            </button>
+                        ))}
+
+                        <div className="mt-auto p-6 rounded-3xl bg-indigo-500/5 border border-indigo-500/10">
+                            <div className="flex items-center gap-3 mb-3">
+                                <Shield size={14} className="text-indigo-400" />
+                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Security Mode</span>
+                            </div>
+                            <p className="text-[10px] text-gray-600 leading-relaxed font-medium">
+                                Settings are isolated per environment to ensure strict data compartmentalization.
+                            </p>
+                        </div>
                     </div>
 
-                    {/* Content Area */}
-                    <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
-                        {activeTab === 'llm' && (
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">LLM Provider</label>
-                                    <select
-                                        value={current.llm_provider}
-                                        onChange={e => handleChange('llm_provider', e.target.value)}
-                                        className="w-full bg-[#1e1e21] border border-white/10 rounded-xl px-4 py-3 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-colors"
-                                    >
-                                        <option value="openai">OpenAI</option>
-                                        <option value="anthropic">Anthropic</option>
-                                        <option value="ollama">Ollama</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Model Name</label>
-                                    <input
-                                        type="text"
-                                        value={current.llm_model}
-                                        onChange={e => handleChange('llm_model', e.target.value)}
-                                        className="w-full bg-[#1e1e21] border border-white/10 rounded-xl px-4 py-3 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-colors"
-                                        placeholder="e.g. gpt-4o"
-                                    />
-                                </div>
-                                <div className="pt-4 border-t border-white/5">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Embedding Provider</label>
-                                    <select
-                                        value={current.embedding_provider}
-                                        onChange={e => handleChange('embedding_provider', e.target.value)}
-                                        className="w-full bg-[#1e1e21] border border-white/10 rounded-xl px-4 py-3 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-colors"
-                                    >
-                                        <option value="openai">OpenAI</option>
-                                        <option value="voyage">Voyage AI</option>
-                                        <option value="local">Local (HuggingFace)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        )}
+                    {/* Content Panel */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-10 bg-white/[0.005]">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeTab}
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="max-w-xl mx-auto space-y-10"
+                            >
+                                {activeTab === 'llm' && (
+                                    <>
+                                        <section className="space-y-6">
+                                            <header className="flex items-center gap-3 pb-2 border-b border-white/5">
+                                                <Zap size={14} className="text-amber-400" />
+                                                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.25em]">Response Engine</h3>
+                                            </header>
 
-                        {activeTab === 'retrieval' && (
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Retrieval Mode</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['hybrid', 'vector', 'keyword'].map(mode => (
-                                            <button
-                                                key={mode}
-                                                onClick={() => handleChange('retrieval_mode', mode)}
-                                                className={`px-3 py-2 rounded-lg text-xs font-bold transition-all border ${current.retrieval_mode === mode ? 'bg-blue-500/20 border-blue-500/50 text-blue-400' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}
-                                            >
-                                                {mode.toUpperCase()}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <p className="mt-2 text-[10px] text-gray-500 italic">
-                                        Hybrid combines semantic understanding with exact matching for best results.
-                                    </p>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 flex justify-between">
-                                        <span>Search Limit (Top-K)</span>
-                                        <span className="text-blue-400">{current.search_limit}</span>
-                                    </label>
-                                    <input
-                                        type="range" min="1" max="20" step="1"
-                                        value={current.search_limit}
-                                        onChange={e => handleChange('search_limit', parseInt(e.target.value))}
-                                        className="w-full accent-blue-500"
-                                    />
-                                </div>
-                                {current.retrieval_mode === 'hybrid' && (
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 flex justify-between">
-                                            <span>Hybrid Alpha (Vector vs Keyword)</span>
-                                            <span className="text-blue-400">{current.hybrid_alpha}</span>
-                                        </label>
-                                        <input
-                                            type="range" min="0" max="1" step="0.1"
-                                            value={current.hybrid_alpha}
-                                            onChange={e => handleChange('hybrid_alpha', parseFloat(e.target.value))}
-                                            className="w-full accent-blue-500"
-                                        />
-                                        <div className="flex justify-between text-[10px] text-gray-500 mt-1 uppercase font-mono">
-                                            <span>Keyword</span>
-                                            <span>Vector</span>
-                                        </div>
+                                            <div className="grid gap-6">
+                                                <div className="space-y-3">
+                                                    <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">AI Provider</label>
+                                                    <div className="grid grid-cols-3 gap-3">
+                                                        {['openai', 'anthropic', 'ollama'].map((prov) => (
+                                                            <button
+                                                                key={prov}
+                                                                onClick={() => handleChange('llm_provider', prov)}
+                                                                className={cn(
+                                                                    "px-4 py-4 rounded-2xl border text-[10px] font-black uppercase tracking-tighter transition-all",
+                                                                    current.llm_provider === prov
+                                                                        ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20"
+                                                                        : "bg-[#0a0a0b] border-white/5 text-gray-600 hover:border-white/10 hover:text-gray-400"
+                                                                )}
+                                                            >
+                                                                {prov}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">Target Model</label>
+                                                    <div className="relative group">
+                                                        <Server className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-700 group-focus-within:text-blue-500 transition-colors" size={18} />
+                                                        <input
+                                                            type="text"
+                                                            value={current.llm_model}
+                                                            onChange={e => handleChange('llm_model', e.target.value)}
+                                                            className="w-full bg-[#0a0a0b] border border-white/10 rounded-2xl pl-14 pr-6 py-5 text-sm text-white outline-none focus:ring-2 ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium placeholder:text-gray-800"
+                                                            placeholder="e.g. gpt-4o-latest"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <section className="space-y-6 pt-4 border-t border-white/5">
+                                            <header className="flex items-center gap-3 pb-2 border-b border-white/5">
+                                                <Database size={14} className="text-emerald-400" />
+                                                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.25em]">Vectorization</h3>
+                                            </header>
+
+                                            <div className="space-y-3">
+                                                <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">Embedding Logic</label>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {[
+                                                        { id: 'openai', label: 'Cloud (OpenAI)', sub: 'Fast & Robust' },
+                                                        { id: 'local', label: 'Local (HuggingFace)', sub: 'Privacy First' }
+                                                    ].map((item) => (
+                                                        <button
+                                                            key={item.id}
+                                                            onClick={() => handleChange('embedding_provider', item.id)}
+                                                            className={cn(
+                                                                "p-5 rounded-2xl border text-left transition-all",
+                                                                current.embedding_provider === item.id
+                                                                    ? "bg-emerald-600/10 border-emerald-500/50 ring-1 ring-emerald-500/50"
+                                                                    : "bg-[#0a0a0b] border-white/5 hover:border-white/10"
+                                                            )}
+                                                        >
+                                                            <div className={cn("text-[10px] font-black uppercase tracking-tighter mb-1", current.embedding_provider === item.id ? "text-emerald-400" : "text-gray-400")}>
+                                                                {item.label}
+                                                            </div>
+                                                            <div className="text-[9px] text-gray-600 font-bold">{item.sub}</div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </section>
+                                    </>
+                                )}
+
+                                {activeTab === 'retrieval' && (
+                                    <div className="space-y-10">
+                                        <section className="space-y-6">
+                                            <header className="flex items-center gap-3 pb-2 border-b border-white/5">
+                                                <Search size={14} className="text-indigo-400" />
+                                                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.25em]">Search Pipeline</h3>
+                                            </header>
+
+                                            <div className="space-y-4">
+                                                <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">Strategy</label>
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {[
+                                                        { id: 'hybrid', label: 'Neural Hybrid', sub: 'Semantic + Keyword matching (Recommended)', color: 'blue' },
+                                                        { id: 'vector', label: 'Pure Vector', sub: 'Conceptual understanding only', color: 'indigo' },
+                                                        { id: 'keyword', label: 'Strict Keyword', sub: 'Exact text overlap matches', color: 'purple' },
+                                                    ].map((mode) => (
+                                                        <button
+                                                            key={mode.id}
+                                                            onClick={() => handleChange('retrieval_mode', mode.id)}
+                                                            className={cn(
+                                                                "flex items-center justify-between p-6 rounded-[2rem] border transition-all text-left group",
+                                                                current.retrieval_mode === mode.id
+                                                                    ? "bg-white border-white shadow-xl"
+                                                                    : "bg-[#0a0a0b] border-white/5 hover:border-white/10"
+                                                            )}
+                                                        >
+                                                            <div>
+                                                                <div className={cn("text-xs font-black uppercase tracking-widest mb-1", current.retrieval_mode === mode.id ? "text-black" : "text-gray-300")}>
+                                                                    {mode.label}
+                                                                </div>
+                                                                <div className={cn("text-[10px] font-medium", current.retrieval_mode === mode.id ? "text-gray-600" : "text-gray-500")}>
+                                                                    {mode.sub}
+                                                                </div>
+                                                            </div>
+                                                            <div className={cn(
+                                                                "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                                                current.retrieval_mode === mode.id ? "bg-black border-black text-white" : "border-white/10 text-transparent"
+                                                            )}>
+                                                                <Check size={12} />
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <section className="space-y-8 pt-4">
+                                            <div className="space-y-6">
+                                                <div className="flex justify-between items-end">
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Expansion Threshold</label>
+                                                        <p className="text-[9px] text-gray-700 font-bold uppercase">Number of context chunks to retrieve</p>
+                                                    </div>
+                                                    <span className="text-2xl font-black text-white font-mono">{current.search_limit}</span>
+                                                </div>
+                                                <input
+                                                    type="range" min="1" max="25" step="1"
+                                                    value={current.search_limit}
+                                                    onChange={e => handleChange('search_limit', parseInt(e.target.value))}
+                                                    className="w-full h-1.5 bg-white/5 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                                                />
+                                            </div>
+
+                                            {current.retrieval_mode === 'hybrid' && (
+                                                <div className="space-y-6 p-8 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/10">
+                                                    <div className="flex justify-between items-end">
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Hybrid Weighting (Alpha)</label>
+                                                            <p className="text-[9px] text-indigo-400/50 font-bold uppercase">Balance Concept vs. Exact Matches</p>
+                                                        </div>
+                                                        <span className="text-xl font-black text-indigo-400 font-mono">{current.hybrid_alpha}</span>
+                                                    </div>
+                                                    <input
+                                                        type="range" min="0" max="1" step="0.1"
+                                                        value={current.hybrid_alpha}
+                                                        onChange={e => handleChange('hybrid_alpha', parseFloat(e.target.value))}
+                                                        className="w-full h-1.5 bg-indigo-500/10 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                                                    />
+                                                    <div className="flex justify-between text-[9px] font-black text-indigo-400/40 uppercase tracking-widest font-mono">
+                                                        <span>Strict BM25</span>
+                                                        <span>Dense Vector</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </section>
                                     </div>
                                 )}
-                            </div>
-                        )}
 
-                        {activeTab === 'system' && (
-                            <div className="space-y-6">
-                                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                    <div>
-                                        <h4 className="text-sm font-bold text-white">Show Reasoning</h4>
-                                        <p className="text-[11px] text-gray-500">Toggle "AI Thinking" process visibility.</p>
+                                {activeTab === 'system' && (
+                                    <div className="space-y-8">
+                                        <section className="space-y-6">
+                                            <header className="flex items-center gap-3 pb-2 border-b border-white/5">
+                                                <Layout size={14} className="text-purple-400" />
+                                                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.25em]">User Experience</h3>
+                                            </header>
+
+                                            <div className="grid gap-4">
+                                                <button
+                                                    onClick={() => handleChange('show_reasoning', !current.show_reasoning)}
+                                                    className={cn(
+                                                        "flex items-center justify-between p-7 rounded-[2.5rem] border transition-all group",
+                                                        current.show_reasoning
+                                                            ? "bg-purple-600/10 border-purple-500/50 ring-1 ring-purple-500/30"
+                                                            : "bg-[#0a0a0b] border-white/5"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-6">
+                                                        <div className={cn(
+                                                            "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
+                                                            current.show_reasoning ? "bg-purple-500 text-white" : "bg-white/5 text-gray-600"
+                                                        )}>
+                                                            <Brain size={24} />
+                                                        </div>
+                                                        <div className="text-left">
+                                                            <div className={cn("text-sm font-black uppercase tracking-tight mb-1", current.show_reasoning ? "text-purple-400" : "text-gray-400")}>
+                                                                Thinking Transparency
+                                                            </div>
+                                                            <div className="text-[10px] text-gray-600 font-bold leading-relaxed max-w-[240px]">
+                                                                Reveal the AI's step-by-step internal reasoning process in the UI.
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className={cn(
+                                                        "w-12 h-6 rounded-full p-1 transition-all relative",
+                                                        current.show_reasoning ? "bg-purple-500" : "bg-white/10"
+                                                    )}>
+                                                        <div className={cn("w-4 h-4 rounded-full bg-white transition-all shadow-sm", current.show_reasoning ? "ml-6" : "ml-0")} />
+                                                    </div>
+                                                </button>
+                                            </div>
+                                        </section>
                                     </div>
-                                    <button
-                                        onClick={() => handleChange('show_reasoning', !current.show_reasoning)}
-                                        className={`w-12 h-6 rounded-full transition-all relative ${current.show_reasoning ? 'bg-blue-500' : 'bg-gray-700'}`}
-                                    >
-                                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${current.show_reasoning ? 'left-7' : 'left-1'}`} />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                                )}
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
                 </div>
 
-                {/* Footer */}
-                <div className="p-6 border-t border-white/5 flex justify-end items-center gap-4 bg-white/2">
-                    <button onClick={onClose} className="text-sm font-semibold text-gray-400 hover:text-white transition-colors">
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={isSaving || Object.keys(localSettings).length === 0}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 text-white text-sm font-bold rounded-xl shadow-lg transition-all active:scale-95"
-                    >
-                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={18} />}
-                        Save Changes
-                    </button>
+                {/* Performance Footer */}
+                <div className="px-10 py-8 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
+                    <div className="flex items-center gap-4 text-gray-600">
+                        <ArrowRight size={14} className="animate-pulse" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Kernel v1.02 Ready</span>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={onClose}
+                            className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors"
+                        >
+                            Discard
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving || Object.keys(localSettings).length === 0}
+                            className="group flex items-center gap-3 px-8 py-4 bg-white disabled:opacity-30 disabled:hover:scale-100 text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl hover:scale-105 active:scale-95 transition-all"
+                        >
+                            {isSaving ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Save size={14} />
+                            )}
+                            Sync Application
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </motion.div>
+            </motion.div>
+        </div>
     );
 }
+
