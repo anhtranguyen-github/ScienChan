@@ -130,7 +130,7 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                     )}
 
                     {query && !isLoading && !hasResults && (
-                        <div className="p-12 text-center text-gray-600 font-medium italic">
+                        <div className="p-12 text-center text-gray-600 font-medium">
                             No results found for "{query}"
                         </div>
                     )}

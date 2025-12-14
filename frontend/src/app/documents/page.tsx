@@ -186,7 +186,7 @@ export default function DocumentsPage() {
                                     </tr>
                                 ) : filteredDocs.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="py-24 text-center text-gray-600 italic">
+                                        <td colSpan={5} className="py-24 text-center text-gray-600">
                                             No documents found in the current scope.
                                         </td>
                                     </tr>
@@ -374,7 +374,7 @@ export default function DocumentsPage() {
                                                     </div>
                                                     <div>
                                                         <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-2 pr-2">Payload Content</div>
-                                                        <div className="bg-[#121214] p-4 rounded-xl text-gray-400 leading-relaxed max-h-32 overflow-y-auto custom-scrollbar italic whitespace-pre-wrap">
+                                                        <div className="bg-[#121214] p-4 rounded-xl text-gray-400 leading-relaxed max-h-32 overflow-y-auto custom-scrollbar whitespace-pre-wrap">
                                                             {point.payload.text || 'No text content'}
                                                         </div>
                                                     </div>
@@ -445,7 +445,7 @@ export default function DocumentsPage() {
                                     ))
                                 }
                                 {workspaces.length <= 1 && (
-                                    <div className="text-center py-6 text-gray-600 italic text-sm">
+                                    <div className="text-center py-6 text-gray-600 text-sm">
                                         No other workspaces available.
                                     </div>
                                 )}
@@ -547,7 +547,7 @@ export default function DocumentsPage() {
                                 Architecture Mismatch Detected
                             </div>
 
-                            <h2 className="text-3xl font-black mb-4 uppercase tracking-tighter leading-none italic">
+                            <h2 className="text-3xl font-black mb-4 uppercase tracking-tighter leading-none">
                                 Embedding Collision
                             </h2>
 
