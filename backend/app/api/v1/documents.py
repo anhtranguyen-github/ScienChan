@@ -1,17 +1,27 @@
-from fastapi import APIRouter, Request, UploadFile, File, HTTPException
+from fastapi import APIRouter, Request, UploadFile, File, HTTPException, BackgroundTasks
 from backend.app.services.document_service import document_service
 
 router = APIRouter(tags=["documents"])
 
 @router.post("/upload")
-async def upload_document(file: UploadFile = File(...), workspace_id: str = "default"):
+async def upload_document(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...), 
+    workspace_id: str = "default"
+):
     try:
-        num_chunks = await document_service.upload(file, workspace_id)
+        task_id, content, filename, content_type = await document_service.upload(file, workspace_id)
+        
+        # Dispatch background task
+        background_tasks.add_task(
+            document_service.run_ingestion,
+            task_id, filename, content, content_type, workspace_id
+        )
+        
         return {
-            "status": "success", 
-            "filename": file.filename, 
-            "chunks": num_chunks,
-            "message": f"Successfully processed {num_chunks} chunks."
+            "status": "pending", 
+            "task_id": task_id,
+            "message": "Ingestion started in background."
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
