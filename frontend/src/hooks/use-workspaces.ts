@@ -74,8 +74,9 @@ export function useWorkspaces() {
                 body: JSON.stringify(payload)
             });
             if (res.ok) {
+                const newWorkspace = await res.json();
                 await fetchWorkspaces();
-                return { success: true };
+                return { success: true, workspace: newWorkspace };
             } else {
                 const data = await res.json();
                 showError("Construction Error", data.detail || 'Failed to create workspace', `Endpoint: ${res.url}`);
@@ -159,7 +160,9 @@ export function useWorkspaces() {
         workspaces,
         currentWorkspace,
         isLoading,
+        error: null, // errors are shown via modal
         selectWorkspace,
+        switchWorkspace: selectWorkspace, // alias for layout
         createWorkspace,
         updateWorkspace,
         deleteWorkspace,
