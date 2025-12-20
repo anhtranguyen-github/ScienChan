@@ -8,7 +8,7 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./tests/setup.ts'],
-        include: ['tests/unit/**/*.test.{ts,tsx}'],
+        include: ['tests/unit/**/*.test.{ts,tsx}', 'tests/integration/**/*.test.{ts,tsx}'],
     },
     resolve: {
         alias: {
@@ -16,3 +16,4 @@ export default defineConfig({
         },
     },
 });
+
