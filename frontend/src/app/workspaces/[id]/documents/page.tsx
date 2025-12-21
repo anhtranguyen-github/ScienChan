@@ -40,7 +40,7 @@ export default function DocumentsPage() {
     const fetchDocuments = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/documents/?workspace_id=${workspaceId}`);
+            const res = await fetch(`${API_BASE_URL}/documents?workspace_id=${workspaceId}`);
             if (res.ok) {
                 const data = await res.json();
                 setDocuments(data);
@@ -51,6 +51,7 @@ export default function DocumentsPage() {
             setIsLoading(false);
         }
     };
+
 
     const filteredDocs = documents.filter(doc => {
         const matchesSearch = doc.filename.toLowerCase().includes(searchQuery.toLowerCase());

@@ -47,7 +47,7 @@ export default function WorkspaceOverviewPage() {
     const fetchWorkspace = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/workspaces/${workspaceId}`);
+            const res = await fetch(`${API_BASE_URL}/workspaces/${workspaceId}/details`);
             if (res.ok) {
                 const data = await res.json();
                 setWorkspace(data);
@@ -58,6 +58,7 @@ export default function WorkspaceOverviewPage() {
             setIsLoading(false);
         }
     };
+
 
     if (isLoading) {
         return (
