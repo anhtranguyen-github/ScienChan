@@ -1,10 +1,11 @@
 import pytest
 from backend.app.rag.rag_service import rag_service
 
-def test_chunk_text():
+@pytest.mark.asyncio
+async def test_chunk_text():
     text = "This is a test document. It contains multiple sentences to test chunking logic."
     # With semantic chunking, it might only return 1 chunk if the text is short
-    chunks = rag_service.chunk_text(text)
+    chunks = await rag_service.chunk_text(text)
     assert len(chunks) >= 1
     assert "test document" in chunks[0]
 
