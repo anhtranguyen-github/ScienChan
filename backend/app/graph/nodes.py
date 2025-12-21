@@ -14,21 +14,13 @@ logger = logging.getLogger(__name__)
 async def retrieval_node(state: AgentState) -> Dict:
     """Retrieve relevant context based on configured settings."""
     workspace_id = state.get("workspace_id", "default")
-    settings = await settings_manager.get_settings(workspace_id)
     
     last_message = state["messages"][-1].content
-    logger.info(f"WS [{workspace_id}] - Retrieving context ({settings.retrieval_mode}) for query: {last_message[:50]}...")
+    logger.info(f"WS [{workspace_id}] - Executing fixed-mode retrieval for query: {last_message[:50]}...")
     
-    query_vector = await rag_service.get_query_embedding(last_message, workspace_id=workspace_id)
-    
-    # Use Search Strategy from settings
-    results = await qdrant.hybrid_search(
-        collection_name="knowledge_base", 
-        query_vector=query_vector, 
-        query_text=last_message,
-        limit=settings.search_limit,
-        mode=settings.retrieval_mode,
-        alpha=settings.hybrid_alpha,
+    # Simple execution: rag_service handles the mode internally based on workspace settings
+    results = await rag_service.search(
+        query=last_message,
         workspace_id=workspace_id
     )
     
@@ -46,10 +38,12 @@ async def retrieval_node(state: AgentState) -> Dict:
         
     logger.info(f"Retrieved {len(context)} context chunks")
     
+    engine_name = "Graph-Aware" if results and results[0]["payload"].get("rag_engine") == "graph" else "Basic Hybrid"
+    
     return {
         "context": context,
         "sources": sources,
-        "reasoning_steps": ["Retrieved context from knowledge base"]
+        "reasoning_steps": [f"Retrieved context using {engine_name} engine"]
     }
 
 from langchain_core.runnables import RunnableConfig
