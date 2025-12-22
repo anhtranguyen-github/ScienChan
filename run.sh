@@ -127,12 +127,12 @@ echo -e "${GREEN} READY! (PID: $BACKEND_PID)${NC}"
 echo -e "\n${BLUE}[4/4] Starting Frontend (Next.js)...${NC}"
 cd frontend
 if [ ! -d "node_modules" ]; then
-    echo -e "${YELLOW}Warning: node_modules not found. Running npm install...${NC}"
-    npm install
+    echo -e "${YELLOW}Warning: node_modules not found. Running bun install...${NC}"
+    bun install
 fi
 
 # Run in background
-nohup npm run dev > ../frontend.log 2>&1 &
+nohup bun run dev > ../frontend.log 2>&1 &
 FRONTEND_PID=$!
 cd ..
 
