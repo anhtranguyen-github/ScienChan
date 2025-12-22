@@ -31,6 +31,12 @@ class AppSettings(BaseModel):
     # UI/System Settings
     theme: str = Field(default="dark", description="App theme")
     show_reasoning: bool = Field(default=True, description="Toggle reasoning steps visibility")
+    
+    def get_rag_hash(self) -> str:
+        """Generate a hash based on core RAG parameters affecting embeddings."""
+        import hashlib
+        config_str = f"{self.embedding_provider}|{self.embedding_model}|{self.chunk_size}|{self.chunk_overlap}|{self.embedding_dim}|{self.rag_engine}"
+        return hashlib.sha256(config_str.encode()).hexdigest()[:12]
 
 class DocumentMetadata(BaseModel):
     id: str
