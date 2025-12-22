@@ -45,6 +45,8 @@ export default function WorkspacesPage() {
       ws.id.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
+      if (a.id === 'default') return -1;
+      if (b.id === 'default') return 1;
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       return a.id.localeCompare(b.id);
     });
