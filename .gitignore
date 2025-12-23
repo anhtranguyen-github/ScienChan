@@ -51,6 +51,8 @@ backend/app/core/__pycache__/
 
 
 .agent/
+.gemini/artifacts/
+
 
 # Testing
 frontend/playwright-report/
