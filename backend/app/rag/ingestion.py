@@ -72,7 +72,9 @@ class IngestionPipeline:
                 "shared_with": (metadata or {}).get("shared_with", []),
                 "doc_id": (metadata or {}).get("doc_id"),
                 "version": (metadata or {}).get("version"),
-                "minio_path": (metadata or {}).get("minio_path")
+                "minio_path": (metadata or {}).get("minio_path"),
+                "content_hash": (metadata or {}).get("content_hash"),
+                "rag_config_hash": (metadata or {}).get("rag_config_hash")
             }
             for i, chunk in enumerate(all_chunks)
         ]
