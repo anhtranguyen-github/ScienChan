@@ -211,6 +211,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
                             <button
                                 onClick={() => router.push(`/workspaces/${workspaceId}/kernel`)}
                                 className="p-2 text-gray-600 hover:text-white transition-colors"
+                                title="Global Settings"
                             >
                                 <SettingsIcon size={14} />
                             </button>
