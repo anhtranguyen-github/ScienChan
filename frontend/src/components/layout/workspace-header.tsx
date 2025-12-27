@@ -22,8 +22,9 @@ export function WorkspaceHeader({ onWorkspaceClick }: WorkspaceHeaderProps) {
         { href: `/workspaces/${workspaceId}`, label: 'Overview', icon: Home },
         { href: `/workspaces/${workspaceId}/chat`, label: 'Chat', icon: MessageSquare },
         { href: `/workspaces/${workspaceId}/documents`, label: 'Documents', icon: FileText },
-        { href: `/workspaces/${workspaceId}/settings`, label: 'Settings', icon: Settings },
+        { href: `/workspaces/${workspaceId}/kernel`, label: 'Settings', icon: Settings },
     ];
+
 
     const isActive = (href: string) => {
         if (href === `/workspaces/${workspaceId}`) {

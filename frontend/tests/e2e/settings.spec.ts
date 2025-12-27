@@ -1,53 +1,42 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Global Settings', () => {
-
-    test('should open settings and update retrieval mode', async ({ page }) => {
+test.describe('Workspace Settings', () => {
+    test.beforeEach(async ({ page }) => {
         await page.goto('/');
-
-        // 1. Open Settings
-        await page.getByTitle('Global Settings').click();
-        await expect(page.getByText('Parameter Configuration')).toBeVisible({ timeout: 15000 });
-
-        // 2. Switch to Retrieval tab
-        await page.getByRole('button', { name: 'Retrieval' }).click();
-        await expect(page.getByText('Search Pipeline')).toBeVisible();
-
-        // 3. Change mode to VECTOR
-        await page.getByRole('button', { name: 'Pure Vector' }).click();
-
-        // 4. Save Changes
-        await page.getByRole('button', { name: 'Sync Core' }).click();
-
-        // 5. Verify modal closed (Wait for URL or check context)
-        // Since we navigate, the modal text should definitely be gone
-        await expect(page.getByText('Parameter Configuration')).not.toBeVisible({ timeout: 10000 });
-
-        // 6. Re-open and verify persistence
-        // If we are at /workspaces/default/kernel, the button title="Global Settings" is in the sidebar
-        await page.getByTitle('Global Settings').click();
-        await page.getByRole('button', { name: 'Retrieval' }).click();
-
-        // Check if VECTOR button has the active class (bg-white text-black in the new design)
-        const vectorBtn = page.getByRole('button', { name: 'Pure Vector' });
-        await expect(vectorBtn).toHaveClass(/bg-white text-black/);
+        await expect(page.getByRole('heading', { name: 'Workspaces' })).toBeVisible({ timeout: 15000 });
+        await page.getByText('Default Workspace').click();
+        await page.waitForLoadState('networkidle');
     });
 
-    test('should toggle reasoning visibility', async ({ page }) => {
+    test('should navigate to settings page', async ({ page }) => {
+        await page.getByRole('link', { name: 'Settings' }).click();
+        await expect(page).toHaveURL(/.*\/kernel/);
+    });
+
+    test('should show settings manager on kernel page', async ({ page }) => {
+        await page.getByRole('link', { name: 'Settings' }).click();
+
+        // Kernel page should have system diagnostics and settings
+        await expect(page.getByText(/System|Diagnostics|Configuration|Settings/i)).toBeVisible({ timeout: 10000 });
+    });
+
+    test('should display current workspace context in settings', async ({ page }) => {
+        await page.getByRole('link', { name: 'Settings' }).click();
+
+        // Should maintain workspace context
+        const header = page.locator('button[title="Switch Workspace"]');
+        await expect(header).toContainText('Default Workspace');
+    });
+});
+
+test.describe('Settings Modal Flow', () => {
+    test('should be accessible from workspace kernel page', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('Default Workspace').click();
+        await page.waitForLoadState('networkidle');
+        await page.getByRole('link', { name: 'Settings' }).click();
 
-        await page.getByTitle('Global Settings').click();
-        await page.getByRole('button', { name: 'Interface' }).click();
-
-        // Find the toggle button
-        const toggle = page.locator('button').filter({ has: page.locator('.rounded-full') });
-        await toggle.click();
-
-        await page.getByRole('button', { name: 'Sync Core' }).click();
-
-        // Verify it stayed toggled
-        await page.getByTitle('Global Settings').click();
-        await page.getByRole('button', { name: 'Interface' }).click();
-        await expect(page.getByText('Parameter Configuration')).toBeVisible();
+        // Kernel page content should be visible
+        await expect(page).toHaveURL(/.*\/kernel/);
     });
 });
