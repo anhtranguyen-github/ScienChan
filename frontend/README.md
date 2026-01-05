@@ -51,3 +51,4 @@ To learn more about the technologies used:
 - [Bun Documentation](https://bun.sh/docs)
 - [Vitest Documentation](https://vitest.dev/)
 - [Playwright Documentation](https://playwright.dev/)
+ 
