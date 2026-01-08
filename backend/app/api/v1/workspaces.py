@@ -89,3 +89,7 @@ async def share_document(workspace_id: str, request: Request):
     from backend.app.services.document_service import document_service
     await document_service.update_workspaces(source_name, target_workspace_id, "share")
     return {"status": "success", "message": f"Document {source_name} shared with {target_workspace_id}"}
+
+@router.get("/{workspace_id}/graph")
+async def get_workspace_graph(workspace_id: str):
+    return await workspace_service.get_graph_data(workspace_id)

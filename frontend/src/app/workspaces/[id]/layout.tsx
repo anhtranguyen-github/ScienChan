@@ -22,7 +22,7 @@ export default function WorkspaceLayout({
     const [showSwitcher, setShowSwitcher] = useState(false);
 
     const handleWorkspaceSelect = (ws: Workspace) => {
-        switchWorkspace(ws.id);
+        switchWorkspace(ws);
         router.push(`/workspaces/${ws.id}`);
         setShowSwitcher(false);
     };

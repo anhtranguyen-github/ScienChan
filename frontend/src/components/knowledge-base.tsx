@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Upload, FileText, Trash2, CheckCircle, Loader2,
     ExternalLink, Database, Search, Share2, Eye,
-    Plus, Filter, Shield
+    Plus, Filter, Shield, ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { API_ROUTES } from '@/lib/api-config';

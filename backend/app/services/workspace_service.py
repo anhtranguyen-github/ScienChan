@@ -161,4 +161,42 @@ class WorkspaceService:
         
         return ws
 
+    @staticmethod
+    async def get_graph_data(workspace_id: str) -> Dict:
+        """Generate a semantic graph of documents within a workspace."""
+        centroids = await qdrant.get_document_centroids(workspace_id)
+        
+        nodes = []
+        for doc_id, data in centroids.items():
+            nodes.append({
+                "id": doc_id,
+                "name": data["name"],
+                "val": 10,
+                "type": "document"
+            })
+            
+        import numpy as np
+        edges = []
+        doc_ids = list(centroids.keys())
+        
+        # O(N^2) but N is small for a workspace
+        for i in range(len(doc_ids)):
+            for j in range(i + 1, len(doc_ids)):
+                id1, id2 = doc_ids[i], doc_ids[j]
+                v1 = np.array(centroids[id1]["vector"])
+                v2 = np.array(centroids[id2]["vector"])
+                
+                # Cosine similarity
+                sim = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+                
+                if sim > 0.75: # Moderate similarity threshold for graph visualization
+                    edges.append({
+                        "source": id1,
+                        "target": id2,
+                        "value": float(sim),
+                        "distance": float(1.0 - sim) # Used for layout distance
+                    })
+        
+        return {"nodes": nodes, "edges": edges}
+
 workspace_service = WorkspaceService()

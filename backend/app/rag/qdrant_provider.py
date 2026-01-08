@@ -256,6 +256,50 @@ class QdrantProvider:
         content = "\n\n".join([p.payload.get("text", "") for p in sorted_points])
         return content
 
+    async def get_document_centroids(self, workspace_id: str):
+        """Calculate the average vector (centroid) for each document in the workspace."""
+        collection_name = await self.get_effective_collection("knowledge_base", workspace_id)
+        
+        # Scroll through all points in the workspace with vectors
+        response = await self.client.scroll(
+            collection_name=collection_name,
+            scroll_filter=qmodels.Filter(
+                should=[
+                    qmodels.FieldCondition(key="workspace_id", match=qmodels.MatchValue(value=workspace_id)),
+                    qmodels.FieldCondition(key="shared_with", match=qmodels.MatchValue(value=workspace_id))
+                ]
+            ),
+            limit=10000,
+            with_payload=True,
+            with_vectors=True
+        )
+        
+        points = response[0]
+        doc_vectors = {} # doc_id -> list of vectors
+        doc_names = {} # doc_id -> name
+        
+        for p in points:
+            doc_id = p.payload.get("doc_id")
+            if not doc_id: continue
+            
+            if doc_id not in doc_vectors:
+                doc_vectors[doc_id] = []
+                # Prefer source name from payload
+                doc_names[doc_id] = p.payload.get("source", "Unknown Document")
+            
+            if p.vector:
+                doc_vectors[doc_id].append(p.vector)
+            
+        centroids = {}
+        import numpy as np
+        for doc_id, vectors in doc_vectors.items():
+            if vectors:
+                centroids[doc_id] = {
+                    "vector": np.mean(vectors, axis=0).tolist(),
+                    "name": doc_names[doc_id]
+                }
+        return centroids
+
 # Global instance
 qdrant = QdrantProvider()
 
