@@ -51,10 +51,17 @@ class QdrantProvider:
         )
 
     async def get_effective_collection(self, collection_name: str, workspace_id: Optional[str] = None):
-        if collection_name == "knowledge_base" and workspace_id:
-             from backend.app.core.settings_manager import settings_manager
-             settings = await settings_manager.get_settings(workspace_id)
-             return self.get_collection_name(settings.embedding_dim)
+        if collection_name == "knowledge_base":
+            if workspace_id:
+                try:
+                    from backend.app.core.settings_manager import settings_manager
+                    settings = await settings_manager.get_settings(workspace_id)
+                    return self.get_collection_name(settings.embedding_dim)
+                except Exception:
+                    # Fallback to default 1536 if settings lookup fails
+                    return self.get_collection_name(1536)
+            # Default fallback if no workspace_id
+            return self.get_collection_name(1536)
         return collection_name
 
     async def hybrid_search(

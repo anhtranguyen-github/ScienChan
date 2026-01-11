@@ -147,7 +147,7 @@ export default function DocumentDetailPage() {
                         <Section title="Basic Information" icon={FileText}>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <InfoCard label="Filename" value={document.filename} />
-                                <InfoCard label="Extension" value={document.extension.toUpperCase()} />
+                                <InfoCard label="Extension" value={document.extension?.toUpperCase() || 'N/A'} />
                                 <InfoCard label="Size" value={formatBytes(document.size_bytes)} />
                                 <InfoCard label="Version" value={`v${document.current_version}`} />
                             </div>

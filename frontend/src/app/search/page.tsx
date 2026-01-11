@@ -23,7 +23,7 @@ interface SearchResult {
     score?: number;
 }
 
-export default function SearchPage() {
+function SearchContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -101,6 +101,18 @@ export default function SearchPage() {
 
             // Search chat threads
             if (scope === 'all' || scope === 'chats') {
+                const searchChatThreads = async (q: string, wsId?: string) => {
+                    try {
+                        let url = `${API_BASE_URL}/threads/search?q=${encodeURIComponent(q)}`;
+                        if (wsId) url += `&workspace_id=${wsId}`;
+                        const res = await fetch(url);
+                        if (res.ok) return await res.json();
+                    } catch (err) {
+                        // Search endpoint might not exist yet
+                    }
+                    return [];
+                };
+
                 const threads = await searchChatThreads(searchQuery, workspaceFilter);
                 threads.forEach((thread: any) => {
                     allResults.push({
@@ -140,18 +152,6 @@ export default function SearchPage() {
         }, 300);
         return () => clearTimeout(timer);
     }, [query, performSearch]);
-
-    const searchChatThreads = async (q: string, wsId?: string) => {
-        try {
-            let url = `${API_BASE_URL}/threads/search?q=${encodeURIComponent(q)}`;
-            if (wsId) url += `&workspace_id=${wsId}`;
-            const res = await fetch(url);
-            if (res.ok) return await res.json();
-        } catch (err) {
-            // Search endpoint might not exist yet
-        }
-        return [];
-    };
 
     const handleResultClick = (result: SearchResult) => {
         switch (result.type) {
@@ -323,5 +323,17 @@ export default function SearchPage() {
                 )}
             </main>
         </div>
+    );
+}
+
+export default function SearchPage() {
+    return (
+        <React.Suspense fallback={
+            <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            </div>
+        }>
+            <SearchContent />
+        </React.Suspense>
     );
 }

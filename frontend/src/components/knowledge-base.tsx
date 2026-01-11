@@ -69,7 +69,14 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
             const res = await fetch(`${API_ROUTES.DOCUMENTS}?workspace_id=${encodeURIComponent(workspaceId)}`);
             if (res.ok) {
                 const data = await res.json();
-                setDocuments(data);
+                // Map backend properties to component interface
+                const mappedDocs = data.map((doc: any) => ({
+                    name: doc.filename,
+                    extension: doc.extension,
+                    chunks: doc.chunks,
+                    shared: doc.workspace_id !== workspaceId
+                }));
+                setDocuments(mappedDocs);
             }
         } catch (err) {
             console.error('Failed to fetch documents', err);
