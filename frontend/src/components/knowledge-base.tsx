@@ -14,18 +14,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useError } from '@/context/error-context';
 
 interface Document {
+    id?: string;
     name: string;
     extension: string;
     chunks: number;
     shared?: boolean;
+    workspace_id?: string;
+    workspace_name?: string;
 }
 
 interface KnowledgeBaseProps {
     workspaceId?: string;
     isSidebar?: boolean;
+    isGlobal?: boolean;
 }
 
-export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: KnowledgeBaseProps) {
+export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGlobal = false }: KnowledgeBaseProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -35,6 +39,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
     const [isSharing, setIsSharing] = useState<string | null>(null);
     const [shareTarget, setShareTarget] = useState('');
     const [activeTasks, setActiveTasks] = useState<any[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Poll for active tasks
     useEffect(() => {
@@ -45,7 +50,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
                     const data = await res.json();
                     const pendingTasks = data.tasks.filter((t: any) =>
                         (t.status === 'pending' || t.status === 'processing') &&
-                        t.metadata.workspace_id === workspaceId
+                        (isGlobal || t.metadata.workspace_id === workspaceId)
                     );
                     setActiveTasks(pendingTasks);
 
@@ -66,15 +71,22 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
 
     const fetchDocuments = async () => {
         try {
-            const res = await fetch(`${API_ROUTES.DOCUMENTS}?workspace_id=${encodeURIComponent(workspaceId)}`);
+            const url = isGlobal
+                ? API_ROUTES.DOCUMENTS_ALL
+                : `${API_ROUTES.DOCUMENTS}?workspace_id=${encodeURIComponent(workspaceId)}`;
+
+            const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
                 // Map backend properties to component interface
                 const mappedDocs = data.map((doc: any) => ({
+                    id: doc.id,
                     name: doc.filename,
                     extension: doc.extension,
                     chunks: doc.chunks,
-                    shared: doc.workspace_id !== workspaceId
+                    shared: !isGlobal && doc.workspace_id !== workspaceId,
+                    workspace_id: doc.workspace_id,
+                    workspace_name: doc.workspace_name || doc.workspace_id
                 }));
                 setDocuments(mappedDocs);
             }
@@ -219,6 +231,19 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
                     </div>
                 </div>
 
+                <div className="flex items-center gap-4 flex-1 max-w-md mx-8">
+                    <div className="relative w-full group">
+                        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-indigo-400 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search intelligence sources..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-xs text-white focus:outline-none focus:ring-2 ring-indigo-500/20 focus:bg-white/[0.05] transition-all placeholder:text-gray-700"
+                        />
+                    </div>
+                </div>
+
                 <div className="flex gap-2">
                     <label className="cursor-pointer h-12 px-6 flex items-center gap-3 rounded-2xl bg-white hover:bg-white/90 text-black shadow-xl transition-all active:scale-95 text-[10px] font-black uppercase tracking-widest">
                         <Upload size={14} />
@@ -288,16 +313,30 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
 
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
                 <AnimatePresence mode="popLayout">
-                    {documents.length === 0 && !isUploading ? (
-                        <div className="flex flex-col items-center justify-center h-full opacity-20">
-                            <div className="w-20 h-20 rounded-[2.5rem] bg-indigo-500/10 flex items-center justify-center mb-6">
-                                <Search size={40} />
-                            </div>
-                            <h4 className="text-sm font-black uppercase tracking-[0.2em] mb-2">Vault Empty</h4>
-                            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">No intelligence sources indexed</p>
-                        </div>
-                    ) : (
-                        documents.map((doc, idx) => (
+                    {(() => {
+                        const filtered = documents.filter(doc =>
+                            doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            doc.workspace_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            doc.extension?.toLowerCase().includes(searchQuery.toLowerCase())
+                        );
+
+                        if (filtered.length === 0 && !isUploading) {
+                            return (
+                                <div className="flex flex-col items-center justify-center h-full opacity-20 py-20">
+                                    <div className="w-20 h-20 rounded-[2.5rem] bg-indigo-500/10 flex items-center justify-center mb-6">
+                                        <Search size={40} />
+                                    </div>
+                                    <h4 className="text-sm font-black uppercase tracking-[0.2em] mb-2">
+                                        {searchQuery ? "No Matches Found" : "Vault Empty"}
+                                    </h4>
+                                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                        {searchQuery ? "Refine your search parameters" : "No intelligence sources indexed"}
+                                    </p>
+                                </div>
+                            );
+                        }
+
+                        return filtered.map((doc, idx) => (
                             <motion.div
                                 key={doc.name}
                                 initial={{ opacity: 0, x: -10 }}
@@ -312,9 +351,17 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
                                     <div className="flex flex-col min-w-0">
                                         <span className="text-sm font-black text-white truncate max-w-[200px] uppercase tracking-tight">{doc.name}</span>
                                         <div className="flex items-center gap-3 mt-1">
-                                            <span className="text-[10px] font-mono text-gray-600 uppercase">{doc.extension.replace('.', '')}</span>
+                                            <span className="text-[10px] font-mono text-gray-600 uppercase">{doc.extension?.replace('.', '') || 'FILE'}</span>
                                             <span className="w-1 h-1 rounded-full bg-gray-800" />
                                             <span className="text-[10px] text-indigo-400/50 font-black uppercase tracking-widest">{doc.chunks} Fragments</span>
+                                            {isGlobal && (
+                                                <>
+                                                    <span className="w-1 h-1 rounded-full bg-gray-800" />
+                                                    <span className="text-[9px] px-2 py-0.5 rounded bg-white/5 text-gray-500 uppercase font-bold tracking-widest">
+                                                        {doc.workspace_name}
+                                                    </span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -354,8 +401,8 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false }: Kn
                                     </button>
                                 </div>
                             </motion.div>
-                        ))
-                    )}
+                        ));
+                    })()}
                 </AnimatePresence>
             </div>
 

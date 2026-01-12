@@ -5,10 +5,11 @@ import { useParams, useRouter } from 'next/navigation';
 import {
     FileText, ArrowLeft, Database, Hash, Calendar,
     Box, Layers, Share2, Trash2, Download, Eye,
-    Loader2, AlertCircle
+    Loader2, AlertCircle, Search
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
+import { ChunkCard } from '@/components/documents/chunk-card';
 
 interface DocumentDetail {
     id: string;
@@ -42,10 +43,33 @@ export default function DocumentDetailPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'info' | 'chunks'>('info');
+    const [chunks, setChunks] = useState<any[]>([]);
+    const [isChunksLoading, setIsChunksLoading] = useState(false);
 
     useEffect(() => {
         fetchDocument();
     }, [docId, workspaceId]);
+
+    useEffect(() => {
+        if (activeTab === 'chunks' && chunks.length === 0) {
+            fetchChunks();
+        }
+    }, [activeTab]);
+
+    const fetchChunks = async () => {
+        setIsChunksLoading(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/documents/${docId}/chunks?workspace_id=${workspaceId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setChunks(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch chunks', err);
+        } finally {
+            setIsChunksLoading(false);
+        }
+    };
 
     const fetchDocument = async () => {
         setIsLoading(true);
@@ -202,10 +226,35 @@ export default function DocumentDetailPage() {
                 )}
 
                 {activeTab === 'chunks' && (
-                    <div className="max-w-4xl mx-auto">
-                        <p className="text-gray-400 text-center py-12">
-                            Chunk preview coming soon. Total chunks: {document.chunks}
-                        </p>
+                    <div className="max-w-5xl mx-auto space-y-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <Layers size={18} className="text-blue-500" />
+                                Index Chunks ({document.chunks})
+                            </h2>
+                            <div className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded border border-white/5">
+                                Showing first {chunks.length} chunks
+                            </div>
+                        </div>
+
+                        {isChunksLoading ? (
+                            <div className="flex flex-col items-center justify-center py-24 gap-4">
+                                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                                <p className="text-sm text-gray-500">Retrieving chunks from vector store...</p>
+                            </div>
+                        ) : chunks.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-4">
+                                {chunks.map((chunk) => (
+                                    <ChunkCard key={chunk.id} chunk={chunk} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-24 bg-[#121214] rounded-3xl border border-dashed border-white/5">
+                                <Database className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+                                <p className="text-gray-400 font-medium">No chunks found</p>
+                                <p className="text-sm text-gray-600 mt-1">Make sure the document is successfully indexed.</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -22,6 +22,7 @@ export function WorkspaceHeader({ onWorkspaceClick }: WorkspaceHeaderProps) {
         { href: `/workspaces/${workspaceId}`, label: 'Overview', icon: Home },
         { href: `/workspaces/${workspaceId}/chat`, label: 'Chat', icon: MessageSquare },
         { href: `/workspaces/${workspaceId}/documents`, label: 'Documents', icon: FileText },
+        { href: `/vault`, label: 'Vault', icon: Database },
         { href: `/workspaces/${workspaceId}/kernel`, label: 'Settings', icon: Settings },
     ];
 

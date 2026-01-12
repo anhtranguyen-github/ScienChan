@@ -51,6 +51,10 @@ async def delete_document(name: str, workspace_id: str = "default", vault_delete
     await document_service.delete(name, workspace_id, vault_delete=vault_delete)
     return {"status": "success", "message": f"Document {name} deleted."}
 
+@router.get("/documents/{name:path}/chunks")
+async def get_document_chunks(name: str, limit: int = 100):
+    return await document_service.get_chunks(name, limit=limit)
+
 @router.get("/documents/{name:path}/inspect")
 async def inspect_document(name: str):
     return await document_service.inspect(name)

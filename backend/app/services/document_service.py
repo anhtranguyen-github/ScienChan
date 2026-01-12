@@ -169,10 +169,17 @@ class DocumentService:
         db = mongodb_manager.get_async_database()
         cursor = db.documents.find()
         docs = await cursor.to_list(length=1000)
+        
+        # Get all workspaces to map IDs to Names
+        ws_cursor = db.workspaces.find({}, {"id": 1, "name": 1})
+        workspaces = await ws_cursor.to_list(length=1000)
+        ws_map = {ws["id"]: ws["name"] for ws in workspaces}
+        
         for d in docs:
             if "_id" in d:
                 d["_id"] = str(d["_id"])
             d["name"] = d.get("filename")
+            d["workspace_name"] = ws_map.get(d.get("workspace_id", ""), "Unknown Workspace")
         return docs
 
     @staticmethod
@@ -239,6 +246,45 @@ class DocumentService:
                     },
                     points=qmodels.Filter(must=[qmodels.FieldCondition(key="doc_id", match=qmodels.MatchValue(value=doc["id"]))])
                 )
+
+    @staticmethod
+    async def get_chunks(name: str, limit: int = 100) -> List[Dict]:
+        from qdrant_client.http import models as qmodels
+        db = mongodb_manager.get_async_database()
+        doc = await db.documents.find_one({
+            "$or": [
+                {"id": name},
+                {"filename": name}
+            ]
+        })
+        if not doc:
+            return []
+            
+        workspace_id = doc.get("workspace_id")
+        collection_name = await qdrant.get_effective_collection("knowledge_base", workspace_id)
+        
+        try:
+            response = await qdrant.client.scroll(
+                collection_name=collection_name,
+                scroll_filter=qmodels.Filter(must=[qmodels.FieldCondition(key="doc_id", match=qmodels.MatchValue(value=doc["id"]))]),
+                limit=limit,
+                with_payload=True,
+                with_vectors=False
+            )
+            chunks = []
+            for p in response[0]:
+                chunks.append({
+                    "id": p.id,
+                    "text": p.payload.get("text", ""),
+                    "index": p.payload.get("index", 0),
+                    "metadata": {k: v for k, v in p.payload.items() if k not in ["text", "vector"]}
+                })
+            # Sort by index
+            chunks.sort(key=lambda x: x["index"])
+            return chunks
+        except Exception as e:
+            logger.error(f"Get chunks failed for {name}: {e}")
+            return []
 
     @staticmethod
     async def inspect(name: str) -> List[Dict]:

@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useWorkspaces } from '@/hooks/use-workspaces';
 import {
   Plus, Search, FileText, MessageSquare,
-  Trash2, Edit3, Loader2, AlertCircle, X, Zap
+  Trash2, Edit3, Loader2, AlertCircle, X, Zap, Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -65,13 +66,22 @@ export default function HomePage() {
             <h1 className="text-xl font-bold">Workspaces</h1>
             <p className="text-sm text-gray-500">Select or create a workspace to begin</p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-medium transition-all"
-          >
-            <Plus size={16} />
-            New Workspace
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/vault"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-gray-300 text-sm font-medium transition-all"
+            >
+              <Database size={16} />
+              Intelligence Vault
+            </Link>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-medium transition-all"
+            >
+              <Plus size={16} />
+              New Workspace
+            </button>
+          </div>
         </div>
       </header>
 
