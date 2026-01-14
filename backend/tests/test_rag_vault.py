@@ -82,11 +82,27 @@ async def test_vault_delete_logic(mocker):
     mocker.patch("backend.app.core.minio.minio_manager.delete_file")
     mocker.patch("backend.app.rag.qdrant_provider.qdrant.delete_document")
     mocker.patch("backend.app.rag.qdrant_provider.qdrant.client.set_payload")
+    
+    # Mock Qdrant collection operations for vault deletion
+    mock_collection_exists = mocker.patch("backend.app.rag.qdrant_provider.qdrant.client.collection_exists")
+    mock_collection_exists.return_value = False  # No collections to delete from
+    mocker.patch("backend.app.rag.qdrant_provider.qdrant.client.delete")
+    mocker.patch("backend.app.rag.qdrant_provider.qdrant.get_collection_name", return_value="knowledge_base_1536")
+    
+    # Mock settings manager for local deletion with proper return value
+    from unittest.mock import AsyncMock, MagicMock
+    mock_settings = MagicMock()
+    mock_settings.embedding_dim = 1536
+    mock_get_settings = AsyncMock(return_value=mock_settings)
+    mocker.patch("backend.app.core.settings_manager.settings_manager.get_settings", mock_get_settings)
 
     db = mongodb_manager.get_async_database()
     ws_id = "ws_vault_test"
     doc_name = "vault_test.txt"
     doc_id = "vtest123"
+    
+    # Cleanup any leftover test data from previous runs
+    await db.documents.delete_many({"id": doc_id})
     
     await db.documents.insert_one({
         "id": doc_id,

@@ -62,7 +62,7 @@ describe('Chat Flow Integration', () => {
     it('submits message through input form', async () => {
         render(<ChatPage />);
 
-        const input = screen.getByPlaceholderText('Ask a question...');
+        const input = screen.getByPlaceholderText('Message in fast mode...');
         const sendButton = screen.getByRole('button', { name: 'Send message' });
 
         // Type a message
@@ -79,7 +79,7 @@ describe('Chat Flow Integration', () => {
     it('clears input after sending message', () => {
         render(<ChatPage />);
 
-        const input = screen.getByPlaceholderText('Ask a question...');
+        const input = screen.getByPlaceholderText('Message in fast mode...');
 
         fireEvent.change(input, { target: { value: 'Test message' } });
         fireEvent.submit(input.closest('form')!);
