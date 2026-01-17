@@ -7,7 +7,7 @@ export interface ToolDefinition {
     description: string;
     type: 'system' | 'custom' | 'mcp';
     enabled: boolean;
-    config?: Record<string, any>;
+    config?: Record<string, unknown>;
 }
 
 export function useTools() {
