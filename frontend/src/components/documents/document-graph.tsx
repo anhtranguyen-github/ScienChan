@@ -7,9 +7,24 @@ import { Loader2, Info } from 'lucide-react';
 
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 
+interface GraphNode {
+    id: string;
+    name: string;
+    type: 'document' | 'workspace' | 'vector';
+    val?: number;
+    x?: number;
+    y?: number;
+}
+
+interface GraphLink {
+    source: string;
+    target: string;
+    value?: number;
+}
+
 interface GraphData {
-    nodes: any[];
-    links: any[];
+    nodes: GraphNode[];
+    links: GraphLink[];
 }
 
 export function DocumentGraph({ workspaceId }: { workspaceId: string }) {
@@ -91,8 +106,9 @@ export function DocumentGraph({ workspaceId }: { workspaceId: string }) {
                 linkColor={() => '#ffffff10'}
                 linkDirectionalParticles={2}
                 linkDirectionalParticleWidth={1.5}
-                linkDirectionalParticleSpeed={d => (d as any).value * 0.005}
-                nodeCanvasObject={(node: any, ctx, globalScale) => {
+                linkDirectionalParticleSpeed={d => ((d as unknown) as GraphLink).value ? ((d as unknown) as GraphLink).value! * 0.005 : 0.001}
+                nodeCanvasObject={(n, ctx, globalScale) => {
+                    const node = n as GraphNode;
                     const label = node.name;
                     const fontSize = 12 / globalScale;
                     ctx.font = `${fontSize}px Inter, sans-serif`;

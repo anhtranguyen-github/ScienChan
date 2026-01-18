@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Settings, Cpu, Search, Layout, Save,
+    X, Settings, Search, Layout, Save,
     Loader2, Brain, Database, Shield, Zap,
     ArrowRight, Check, Sliders, Server
 } from 'lucide-react';
@@ -43,7 +43,7 @@ export function SettingsManager({ onClose, workspaceId, workspaceName }: { onClo
         }
     };
 
-    const handleChange = (key: keyof AppSettings, value: any) => {
+    const handleChange = (key: keyof AppSettings, value: AppSettings[keyof AppSettings]) => {
         setLocalSettings(prev => ({ ...prev, [key]: value }));
     };
 
@@ -51,7 +51,7 @@ export function SettingsManager({ onClose, workspaceId, workspaceName }: { onClo
         { id: 'llm', label: 'Intelligence', icon: Brain, color: 'text-blue-400', bg: 'bg-blue-400/10' },
         { id: 'retrieval', label: 'Retrieval', icon: Database, color: 'text-indigo-400', bg: 'bg-indigo-400/10' },
         { id: 'system', label: 'Interface', icon: Sliders, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-    ];
+    ] as const;
 
     const content = (
         <motion.div
@@ -99,7 +99,7 @@ export function SettingsManager({ onClose, workspaceId, workspaceName }: { onClo
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
+                            onClick={() => setActiveTab(tab.id)}
                             className={cn(
                                 "group flex items-center gap-4 px-5 py-4 rounded-2xl transition-all relative overflow-hidden",
                                 activeTab === tab.id

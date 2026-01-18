@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, FileText, ExternalLink } from 'lucide-react';
+import { X, FileText } from 'lucide-react';
 
 interface Source {
     id: number;

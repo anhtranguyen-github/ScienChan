@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, X, ShieldAlert, Terminal } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { X, ShieldAlert, Terminal } from 'lucide-react';
 
 interface ErrorModalProps {
     isOpen: boolean;

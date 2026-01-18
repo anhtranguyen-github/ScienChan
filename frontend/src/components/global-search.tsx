@@ -1,16 +1,22 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, X, MessageSquare, Database, Layout, Loader2, Command, Tag } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Search, MessageSquare, Database, Layout, Loader2, Command } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { API_ROUTES } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
 
+interface SearchResultItem {
+    id: string;
+    name: string;
+    [key: string]: unknown;
+}
+
 interface SearchResults {
-    workspaces: any[];
-    threads: any[];
-    documents: any[];
+    workspaces: SearchResultItem[];
+    threads: SearchResultItem[];
+    documents: SearchResultItem[];
 }
 
 export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -54,7 +60,7 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
 
-    const navigateTo = (type: string, id: string, extra?: any) => {
+    const navigateTo = (type: string, id: string, extra?: { workspace_id?: string }) => {
         onClose();
         if (type === 'workspace') {
             router.push(`/workspaces/${id}`);
@@ -137,7 +143,7 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
 
                     <div className="space-y-4 p-2">
                         {/* Workspaces */}
-                        {(activeFilter === 'all' || activeFilter === 'workspaces') && results?.workspaces.length! > 0 && (
+                        {(activeFilter === 'all' || activeFilter === 'workspaces') && (results?.workspaces?.length ?? 0) > 0 && (
                             <section>
                                 <h3 className="px-4 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Environments</h3>
                                 {results?.workspaces.map((ws) => (
@@ -159,7 +165,7 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                         )}
 
                         {/* Threads */}
-                        {(activeFilter === 'all' || activeFilter === 'threads') && results?.threads.length! > 0 && (
+                        {(activeFilter === 'all' || activeFilter === 'threads') && (results?.threads?.length ?? 0) > 0 && (
                             <section>
                                 <h3 className="px-4 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Conversations</h3>
                                 {results?.threads.map((thread) => (
@@ -187,7 +193,7 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                         )}
 
                         {/* Documents */}
-                        {(activeFilter === 'all' || activeFilter === 'documents') && results?.documents.length! > 0 && (
+                        {(activeFilter === 'all' || activeFilter === 'documents') && (results?.documents?.length ?? 0) > 0 && (
                             <section>
                                 <h3 className="px-4 py-2 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Resources</h3>
                                 {results?.documents.map((doc) => (

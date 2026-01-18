@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Hash, Type, FileText, Layers } from 'lucide-react';
+import { Type } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ChunkCardProps {
@@ -9,7 +9,7 @@ interface ChunkCardProps {
         id: string;
         text: string;
         index: number;
-        metadata: any;
+        metadata: Record<string, unknown>;
     };
     className?: string;
 }
@@ -45,7 +45,7 @@ export function ChunkCard({ chunk, className }: ChunkCardProps) {
 
             {chunk.metadata && Object.keys(chunk.metadata).length > 0 && (
                 <div className="px-4 py-2 border-t border-white/5 flex flex-wrap gap-2">
-                    {Object.entries(chunk.metadata).map(([key, value]: [string, any]) => {
+                    {Object.entries(chunk.metadata).map(([key, value]) => {
                         if (typeof value === 'object' || key === 'text' || key === 'doc_id' || key === 'index') return null;
                         return (
                             <div key={key} className="px-2 py-0.5 rounded bg-white/5 text-[9px] text-gray-500 border border-white/5">
