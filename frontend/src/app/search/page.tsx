@@ -4,8 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
-    Search, FileText, MessageSquare, Box, X, Filter,
-    Loader2, ArrowRight, Clock
+    Search, FileText, MessageSquare,
+    Loader2, X, ArrowRight, Clock
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,22 @@ interface SearchResult {
     score?: number;
 }
 
+interface SearchWorkspace {
+    id: string;
+    name: string;
+    description?: string;
+    stats?: { doc_count: number };
+}
+
+interface SearchDoc {
+    id?: string;
+    filename: string;
+    snippet?: string;
+    workspace_id: string;
+    created_at?: string;
+    score?: number;
+}
+
 function SearchContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -33,7 +49,7 @@ function SearchContent() {
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [recentSearches, setRecentSearches] = useState<string[]>([]);
-    const [workspaces, setWorkspaces] = useState<any[]>([]);
+    const [workspaces, setWorkspaces] = useState<SearchWorkspace[]>([]);
 
     // Load recent searches from localStorage
     useEffect(() => {
@@ -68,7 +84,7 @@ function SearchContent() {
                 const docRes = await fetch(`${API_BASE_URL}/documents/search?q=${encodeURIComponent(searchQuery)}${wsParam}`);
                 if (docRes.ok) {
                     const docs = await docRes.json();
-                    docs.forEach((doc: any) => {
+                    docs.forEach((doc: SearchDoc) => {
                         allResults.push({
                             type: 'document',
                             id: doc.id || doc.filename,
@@ -107,18 +123,20 @@ function SearchContent() {
                         if (wsId) url += `&workspace_id=${wsId}`;
                         const res = await fetch(url);
                         if (res.ok) return await res.json();
-                    } catch (err) {
+                    } catch {
                         // Search endpoint might not exist yet
                     }
                     return [];
                 };
 
                 const threads = await searchChatThreads(searchQuery, workspaceFilter);
-                threads.forEach((thread: any) => {
+                threads.forEach((thread: Record<string, unknown>) => {
+                    const threadId = thread.thread_id as string;
+                    const threadTitle = (thread.title as string) || 'Chat Thread';
                     allResults.push({
                         type: 'chat',
-                        id: thread.thread_id,
-                        title: thread.title || 'Chat Thread',
+                        id: threadId,
+                        title: threadTitle,
                         snippet: thread.last_message || '',
                         workspace_id: thread.workspace_id,
                         created_at: thread.last_active

@@ -31,7 +31,6 @@ interface Document {
 export default function KnowledgePage() {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isUploading, setIsUploading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeSource, setActiveSource] = useState<{ id: number; name: string; content: string } | null>(null);
@@ -46,7 +45,6 @@ export default function KnowledgePage() {
             }
         } catch (err) {
             console.error('Failed to fetch documents', err);
-            setError('Could not connect to backend server');
         } finally {
             setIsLoading(false);
         }
@@ -61,7 +59,6 @@ export default function KnowledgePage() {
         if (!file) return;
 
         setIsUploading(true);
-        setError(null);
 
         const formData = new FormData();
         formData.append('file', file);
@@ -77,10 +74,10 @@ export default function KnowledgePage() {
                 e.target.value = '';
             } else {
                 const data = await res.json();
-                setError(data.detail || 'Upload failed');
+                console.error(data.detail || 'Upload failed');
             }
-        } catch (err) {
-            setError('Connection error occurred');
+        } catch {
+            console.error('Connection error occurred');
         } finally {
             setIsUploading(false);
         }

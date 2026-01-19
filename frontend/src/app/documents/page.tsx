@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useDocuments, Document, DocumentPoint } from '@/hooks/use-documents';
+import { useDocuments, Document } from '@/hooks/use-documents';
 import { useWorkspaces } from '@/hooks/use-workspaces';
 import {
     FileText, Database, Trash2, Share2,
-    ExternalLink, Info, Search, Filter,
-    ChevronLeft, Layers, MoreHorizontal, Layout,
+    Info, Search,
+    ChevronLeft, Layers, Layout,
     Move, X, Check, Globe, ArrowRight, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

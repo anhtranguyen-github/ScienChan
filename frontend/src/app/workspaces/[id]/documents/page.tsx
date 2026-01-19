@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
     FileText, Upload, Trash2, Share2, Search,
-    Loader2, AlertCircle, Filter, Grid, List, Network
+    Loader2, Grid, List, Network
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
@@ -36,23 +36,7 @@ export default function DocumentsPage() {
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-        fetchDocuments();
-    }, [workspaceId]);
-
-    // Polling for indexing status
-    useEffect(() => {
-        const hasIndexing = documents.some(doc => doc.status === 'indexing');
-        if (!hasIndexing) return;
-
-        const interval = setInterval(() => {
-            fetchDocuments(false); // Fetch without full loading state
-        }, 2000);
-
-        return () => clearInterval(interval);
-    }, [documents]);
-
-    const fetchDocuments = async (showLoading = true) => {
+    const fetchDocuments = useCallback(async (showLoading = true) => {
         if (showLoading) setIsLoading(true);
         try {
             const res = await fetch(`${API_BASE_URL}/documents?workspace_id=${workspaceId}`);
@@ -65,7 +49,11 @@ export default function DocumentsPage() {
         } finally {
             if (showLoading) setIsLoading(false);
         }
-    };
+    }, [workspaceId]);
+
+    useEffect(() => {
+        fetchDocuments();
+    }, [workspaceId, fetchDocuments]);
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

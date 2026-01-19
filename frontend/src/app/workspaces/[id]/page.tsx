@@ -5,10 +5,24 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
     MessageSquare, FileText, Settings, Zap, Database,
-    Activity, Clock, ArrowRight, Loader2
+    Clock, ArrowRight, Loader2
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
+
+interface Thread {
+    id: string;
+    title?: string;
+    updated_at?: string;
+    message_count?: number;
+}
+
+interface DocumentSummary {
+    id: string;
+    filename: string;
+    chunks?: number;
+    status?: string;
+}
 
 interface WorkspaceDetail {
     id: string;
@@ -29,8 +43,8 @@ interface WorkspaceDetail {
         llm_model: string;
         retrieval_mode: string;
     };
-    threads: any[];
-    documents: any[];
+    threads: Thread[];
+    documents: DocumentSummary[];
 }
 
 export default function WorkspaceOverviewPage() {
