@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 // Setup mocks
 const mockRouterPush = vi.fn();
@@ -31,7 +31,11 @@ vi.mock('@/context/workspace-context', () => ({
 }));
 
 // Dynamic message state for integration testing
-let mockMessages: any[] = [];
+interface Message {
+    role: 'user' | 'assistant';
+    content: string;
+}
+let mockMessages: Message[] = [];
 let mockIsLoading = false;
 
 vi.mock('@/hooks/use-chat', () => ({
