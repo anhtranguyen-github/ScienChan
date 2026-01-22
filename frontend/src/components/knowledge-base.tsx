@@ -32,6 +32,7 @@ interface Task {
         workspace_id: string;
         filename?: string;
     };
+    message?: string;
 }
 
 interface BackendDocument {

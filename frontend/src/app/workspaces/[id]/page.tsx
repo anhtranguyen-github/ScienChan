@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
     MessageSquare, FileText, Settings, Zap, Database,
-    Clock, ArrowRight, Loader2
+    Clock, ArrowRight, Loader2, type LucideIcon
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ interface Thread {
 interface DocumentSummary {
     id: string;
     filename: string;
+    name?: string;
     chunks?: number;
     status?: string;
 }
@@ -55,23 +56,23 @@ export default function WorkspaceOverviewPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        const fetchWorkspace = async () => {
+            setIsLoading(true);
+            try {
+                const res = await fetch(`${API_BASE_URL}/workspaces/${workspaceId}/details`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setWorkspace(data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch workspace', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
         fetchWorkspace();
     }, [workspaceId]);
-
-    const fetchWorkspace = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch(`${API_BASE_URL}/workspaces/${workspaceId}/details`);
-            if (res.ok) {
-                const data = await res.json();
-                setWorkspace(data);
-            }
-        } catch (err) {
-            console.error('Failed to fetch workspace', err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
 
     if (isLoading) {
@@ -194,7 +195,7 @@ export default function WorkspaceOverviewPage() {
                             <p className="text-sm text-gray-600">No chat history yet</p>
                         ) : (
                             <div className="space-y-2">
-                                {workspace.threads.slice(0, 5).map((thread: any) => (
+                                {workspace.threads.slice(0, 5).map((thread: Thread) => (
                                     <Link
                                         key={thread.id}
                                         href={`/workspaces/${workspaceId}/chat/${thread.id}`}
@@ -229,7 +230,7 @@ export default function WorkspaceOverviewPage() {
                             <p className="text-sm text-gray-600">No documents uploaded yet</p>
                         ) : (
                             <div className="space-y-2">
-                                {workspace.documents.slice(0, 5).map((doc: any) => (
+                                {workspace.documents.slice(0, 5).map((doc: DocumentSummary) => (
                                     <Link
                                         key={doc.id}
                                         href={`/workspaces/${workspaceId}/documents/${doc.id}`}
@@ -256,7 +257,7 @@ export default function WorkspaceOverviewPage() {
     );
 }
 
-function StatCard({ label, value, icon: Icon, color }: { label: string; value: string; icon: any; color: string }) {
+function StatCard({ label, value, icon: Icon, color }: { label: string; value: string; icon: LucideIcon; color: string }) {
     const colorClasses: Record<string, string> = {
         blue: 'bg-blue-500/10 text-blue-500',
         green: 'bg-green-500/10 text-green-500',
@@ -275,7 +276,7 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: s
     );
 }
 
-function ActionCard({ href, title, description, icon: Icon }: { href: string; title: string; description: string; icon: any }) {
+function ActionCard({ href, title, description, icon: Icon }: { href: string; title: string; description: string; icon: LucideIcon }) {
     return (
         <Link
             href={href}
