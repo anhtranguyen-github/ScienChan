@@ -40,7 +40,7 @@ export function useWorkspaces() {
             const res = await fetch(API_ROUTES.WORKSPACES);
             if (!res.ok) {
                 const data = await res.json();
-                showError("Database Sync Failed", data.detail || res.statusText, res.url);
+                showError("Connection Failed", "Unable to load your workspaces. Please check your network connection.", undefined);
                 return;
             }
             const data = await res.json();
@@ -91,13 +91,32 @@ export function useWorkspaces() {
                 return { success: true, workspace: newWorkspace };
             } else {
                 const data = await res.json();
-                showError("Construction Error", data.detail || 'Failed to create workspace', `Endpoint: ${res.url}`);
-                return { success: false, error: data.detail || 'Failed to create workspace' };
+                const rawError = data.detail || 'Failed to create workspace';
+                let title = "Unable to Create Workspace";
+                let message = rawError;
+                let details = undefined;
+
+                if (res.status === 400) {
+                    if (rawError.includes('already exists')) {
+                        title = "Name Unavailable";
+                        message = "A workspace with this name already exists. Please choose a different name.";
+                    } else if (rawError.includes('illegal path') || rawError.includes('valid characters')) {
+                        title = "Invalid Name";
+                        message = "The workspace name contains invalid characters. Please use only letters, numbers, underscores, and hyphens.";
+                    }
+                } else if (res.status >= 500) {
+                    title = "System Error";
+                    message = "Something went wrong on our end. Please try again later.";
+                    details = rawError;
+                }
+
+                showError(title, message, details);
+                return { success: false, error: message };
             }
         } catch (err) {
             console.error('Failed to create workspace:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Connection to backend failed';
-            showError("Network Error", errorMessage);
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            showError("Connection Error", "Could not connect to the server. Please check your internet connection.");
             return { success: false, error: 'Connection error' };
         }
     };
@@ -113,11 +132,11 @@ export function useWorkspaces() {
                 await fetchWorkspaces();
             } else {
                 const data = await res.json();
-                showError("Modification Failed", data.detail || 'Failed to update workspace');
+                showError("Update Failed", data.detail || 'Unable to update workspace settings.');
             }
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Connection to backend failed';
-            showError("Network Error", errorMessage);
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            showError("Connection Error", "Could not save changes. Please check your connection.");
             console.error('Failed to update workspace:', err);
         }
     };
@@ -134,11 +153,11 @@ export function useWorkspaces() {
                 await fetchWorkspaces();
             } else {
                 const data = await res.json();
-                showError("Deconstruction Error", data.detail || 'Failed to delete workspace');
+                showError("Deletion Failed", data.detail || 'Unable to delete workspace.');
             }
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Connection to backend failed';
-            showError("Network Error", errorMessage);
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            showError("Connection Error", "Could not delete workspace. Please check your connection.");
             console.error('Failed to delete workspace:', err);
         }
     };

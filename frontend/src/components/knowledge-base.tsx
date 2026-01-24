@@ -92,17 +92,37 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
         }
     }, [isGlobal, workspaceId]);
 
+    const notifiedTasksRef = React.useRef<Set<string>>(new Set());
+
     useEffect(() => {
         const pollTasks = async () => {
             try {
                 const res = await fetch(`${API_ROUTES.TASKS}?type=ingestion`);
                 if (res.ok) {
                     const data = await res.json();
+
+                    // Filter pending tasks for the UI list
                     const pendingTasks = data.tasks.filter((t: Task) =>
                         (t.status === 'pending' || t.status === 'processing') &&
                         (isGlobal || t.metadata.workspace_id === workspaceId)
                     );
                     setActiveTasks(pendingTasks);
+
+                    // Check for active failures we haven't shown yet
+                    const failedTasks = data.tasks.filter((t: Task) =>
+                        t.status === 'failed' &&
+                        (isGlobal || t.metadata.workspace_id === workspaceId) &&
+                        !notifiedTasksRef.current.has(t.id)
+                    );
+
+                    for (const task of failedTasks) {
+                        showError(
+                            "Ingestion Failed",
+                            task.message || "The system encountered an error while processing this document.",
+                            `File: ${task.metadata.filename || 'Unknown'}`
+                        );
+                        notifiedTasksRef.current.add(task.id);
+                    }
 
                     const hasJustCompleted = data.tasks.some((t: Task) => t.status === 'completed' && t.progress === 100);
                     if (hasJustCompleted) {
@@ -116,7 +136,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
 
         const interval = setInterval(pollTasks, 2000);
         return () => clearInterval(interval);
-    }, [workspaceId, isGlobal, fetchDocuments]);
+    }, [workspaceId, isGlobal, fetchDocuments, showError]);
 
     useEffect(() => {
         if (workspaceId) {

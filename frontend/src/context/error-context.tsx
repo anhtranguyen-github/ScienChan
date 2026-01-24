@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { ErrorModal } from '@/components/error-modal';
 
 interface ErrorContextType {
-    showError: (message: string, details?: string, title?: string) => void;
+    showError: (title: string, message: string, details?: string) => void;
 }
 
 const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
@@ -12,7 +12,7 @@ const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
 export function ErrorProvider({ children }: { children: React.ReactNode }) {
     const [error, setError] = useState<{ message: string; details?: string; title?: string } | null>(null);
 
-    const showError = useCallback((message: string, details?: string, title?: string) => {
+    const showError = useCallback((title: string, message: string, details?: string) => {
         setError({ message, details, title });
     }, []);
 
