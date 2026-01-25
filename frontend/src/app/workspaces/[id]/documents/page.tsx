@@ -75,15 +75,23 @@ export default function DocumentsPage() {
                     );
 
                     for (const task of failedTasks) {
+                        const rawMessage = task.message || "";
+                        let displayMessage = "The system encountered an error while processing this document.";
+                        let displayTitle = "Ingestion Failed";
+
+                        if (rawMessage.includes('illegal path')) {
+                            displayTitle = "Invalid Filename";
+                            displayMessage = "The filename contains characters that are not allowed by the storage system.";
+                        } else if (rawMessage) {
+                            displayMessage = rawMessage;
+                        }
+
                         showError(
-                            "Ingestion Failed",
-                            task.message || "The system encountered an error while processing this document.",
+                            displayTitle,
+                            displayMessage,
                             `File: ${task.metadata.filename || 'Unknown'}`
                         );
                         notifiedTasksRef.current.add(task.id);
-
-                        // Also stop the "loading" state if we were specifically uploading this file?
-                        // But polling runs independently. IsUploading is for the POST request mostly.
                     }
 
                     // Check for completions to refresh the list
@@ -95,9 +103,6 @@ export default function DocumentsPage() {
                     );
 
                     if (hasJustCompleted) {
-                        // Mark as seen so we don't refresh infinitely if the completed task stays in the list
-                        // Actually, completed tasks might hang around. 
-                        // We can just refresh.
                         fetchDocuments(false);
                     }
                 }
@@ -129,7 +134,17 @@ export default function DocumentsPage() {
                 await res.json();
             } else {
                 const error = await res.json();
-                showError("Ingestion Rejected", error.detail || 'Upload failed', `File: ${file.name}`);
+                const rawError = error.detail || 'Upload failed';
+
+                let title = "Ingestion Rejected";
+                let message = rawError;
+
+                if (rawError.includes('illegal path')) {
+                    title = "Invalid Filename";
+                    message = "The filename contains characters that are not allowed. Please rename the file and try again.";
+                }
+
+                showError(title, message, `File: ${file.name}`);
             }
         } catch (err) {
             console.error('Upload error:', err);

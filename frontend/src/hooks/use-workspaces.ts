@@ -101,7 +101,7 @@ export function useWorkspaces() {
                         title = "Name Unavailable";
                         message = "A workspace with this name already exists. Please choose a different name.";
                     } else if (rawError.includes('illegal path') || rawError.includes('valid characters')) {
-                        title = "Invalid Name";
+                        title = "Invalid Name or Path";
                         message = "The workspace name contains invalid characters. Please use only letters, numbers, underscores, and hyphens.";
                     }
                 } else if (res.status >= 500) {

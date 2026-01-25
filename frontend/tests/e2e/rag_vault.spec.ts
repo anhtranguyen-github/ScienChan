@@ -4,15 +4,13 @@ test.describe('RAG & Vault E2E', () => {
 
 
     test('should handle global vault deletion', async ({ page }) => {
-        test.setTimeout(60000);
         // 1. Go to Documents
         await page.goto('/documents');
 
         // Wait for docs to load
         await page.waitForResponse(res => res.url().includes('/documents-all') && res.status() === 200);
-        await page.waitForTimeout(1000); // Settle UI
 
-        // Locate first document
+        // Locate first document row to ensure UI has rendered
         const firstDoc = page.locator('tbody tr').first();
         const docNameEl = firstDoc.getByTestId('doc-name');
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/lib/api-config';
+import { useError } from '@/context/error-context';
 
 export interface DocumentPoint {
     id: string;
@@ -20,19 +21,25 @@ export interface Document {
 export function useDocuments() {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { showError } = useError();
 
     const fetchDocuments = useCallback(async () => {
         try {
             setIsLoading(true);
             const res = await fetch(API_ROUTES.DOCUMENTS_ALL);
+            if (!res.ok) {
+                showError("Retrieval Failed", "The system could not load the global document vault.");
+                return;
+            }
             const data = await res.json();
             setDocuments(data);
         } catch (err) {
             console.error('Failed to fetch all documents:', err);
+            showError("Connection Error", "Intelligence vault link offline.");
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [showError]);
 
     useEffect(() => {
         fetchDocuments();
@@ -49,9 +56,13 @@ export function useDocuments() {
             if (res.ok) {
                 await fetchDocuments();
                 return true;
+            } else {
+                const data = await res.json();
+                showError("Purge Failed", data.detail || "Unable to remove document from sector.");
             }
         } catch (err) {
             console.error('Failed to delete document:', err);
+            showError("Network Error", "Transmission lost during purge request.");
         }
         return false;
     };
@@ -73,12 +84,15 @@ export function useDocuments() {
                 await fetchDocuments();
                 return { success: true };
             }
+            const data = await res.json();
             if (res.status === 409) {
-                const data = await res.json();
                 return { success: false, conflict: true, error: data.detail };
+            } else {
+                showError("Migration Failed", data.detail || "Unable to orchestrate document transfer.");
             }
         } catch (err) {
             console.error(`Failed to ${action} document:`, err);
+            showError("Network Error", "Handshake failed during workspace migration.");
         }
         return { success: false };
     };
@@ -88,9 +102,12 @@ export function useDocuments() {
             const res = await fetch(`${API_ROUTES.DOCUMENTS}/${encodeURIComponent(name)}/inspect`);
             if (res.ok) {
                 return await res.json();
+            } else {
+                showError("Scan Failed", "Unable to retrieve low-level segment data.");
             }
         } catch (err) {
             console.error('Failed to inspect document:', err);
+            showError("Connection Error", "Data probe failed.");
         }
         return null;
     };
