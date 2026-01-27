@@ -78,65 +78,100 @@ export function useWorkspaces() {
         localStorage.setItem('currentWorkspaceId', ws.id);
     };
 
+    const validateWorkspaceName = (name: string) => {
+        if (!name.trim()) return "Workspace name cannot be empty.";
+        const illegalChars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '[', ']', '{', '}', '(', ')', ';', '&', '$', '#', '@', '!'];
+        const found = illegalChars.filter(c => name.includes(c));
+        if (found.length > 0) {
+            return `Workspace name contains invalid characters: ${found.join(' ')}. Please use only letters, numbers, underscores, and hyphens.`;
+        }
+        return null;
+    };
+
     const createWorkspace = async (payload: { name: string; description?: string; rag_engine?: string }) => {
+        // Optimistic Validation (UX Immediacy)
+        const validationError = validateWorkspaceName(payload.name);
+        if (validationError) {
+            showError("Invalid Input", validationError);
+            return { success: false, error: validationError };
+        }
+
         try {
             const res = await fetch(API_ROUTES.WORKSPACES, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (res.ok) {
-                const newWorkspace = await res.json();
-                await fetchWorkspaces();
-                return { success: true, workspace: newWorkspace };
-            } else {
-                const data = await res.json();
-                const rawError = data.detail || 'Failed to create workspace';
-                let title = "Unable to Create Workspace";
-                let message = rawError;
-                let details = undefined;
+            const data = await res.json();
 
-                if (res.status === 400) {
-                    if (rawError.includes('already exists')) {
+            if (res.ok) {
+                await fetchWorkspaces();
+                return { success: true, workspace: data };
+            } else {
+                // Structured Error Handling (Code-based contract)
+                let title = "Unable to Create Workspace";
+                let message = data.detail || "System rejected creation request.";
+
+                switch (data.code) {
+                    case "CONFLICT_ERROR":
                         title = "Name Unavailable";
-                        message = "A workspace with this name already exists. Please choose a different name.";
-                    } else if (rawError.includes('illegal path') || rawError.includes('valid characters')) {
-                        title = "Invalid Name or Path";
-                        message = "The workspace name contains invalid characters. Please use only letters, numbers, underscores, and hyphens.";
-                    }
-                } else if (res.status >= 500) {
-                    title = "System Error";
-                    message = "Something went wrong on our end. Please try again later.";
-                    details = rawError;
+                        message = "A workspace with this name already exists.";
+                        break;
+                    case "VALIDATION_ERROR":
+                        title = "Invalid Name Format";
+                        message = data.detail; // Backend provides specifics
+                        break;
+                    default:
+                        if (res.status >= 500) {
+                            title = "Server Failure";
+                            message = "The infrastructure encountered an error while initializing the workspace.";
+                        }
                 }
 
-                showError(title, message, details);
+                showError(title, message, data.params ? JSON.stringify(data.params) : undefined);
                 return { success: false, error: message };
             }
         } catch (err) {
             console.error('Failed to create workspace:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-            showError("Connection Error", "Could not connect to the server. Please check your internet connection.");
+            showError("Network Error", "Handshake failed. The intelligence hub is currently unreachable.");
             return { success: false, error: 'Connection error' };
         }
     };
 
     const updateWorkspace = async (id: string, name: string, description?: string) => {
+        // Optimistic Validation
+        const validationError = validateWorkspaceName(name);
+        if (validationError) {
+            showError("Invalid Input", validationError);
+            return;
+        }
+
         try {
             const res = await fetch(API_ROUTES.WORKSPACE_DETAIL(id), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, description })
             });
+            const data = await res.json();
+
             if (res.ok) {
                 await fetchWorkspaces();
             } else {
-                const data = await res.json();
-                showError("Update Failed", data.detail || 'Unable to update workspace settings.');
+                let title = "Update Failed";
+                let message = data.detail || 'Unable to update workspace settings.';
+
+                if (data.code === "CONFLICT_ERROR") {
+                    title = "Name Conflict";
+                    message = "Another workspace is already using this name.";
+                } else if (data.code === "VALIDATION_ERROR") {
+                    title = "Invalid Name";
+                    message = data.detail;
+                }
+
+                showError(title, message);
             }
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-            showError("Connection Error", "Could not save changes. Please check your connection.");
+            showError("Connection Error", "Could not save changes. Handshake failed during synchronization.");
             console.error('Failed to update workspace:', err);
         }
     };

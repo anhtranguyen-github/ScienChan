@@ -2,6 +2,7 @@ from typing import List, Optional, Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from backend.app.services.workspace_service import workspace_service
+from backend.app.core.exceptions import ValidationError, NotFoundError
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
@@ -45,28 +46,19 @@ async def list_workspaces():
 @router.post("/", response_model=Workspace)
 @router.post("", response_model=Workspace)
 async def create_workspace(ws: WorkspaceCreate):
-    try:
-        return await workspace_service.create(ws.model_dump())
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return await workspace_service.create(ws.model_dump())
 
 @router.patch("/{workspace_id}", response_model=Workspace)
 async def update_workspace(workspace_id: str, ws: WorkspaceUpdate):
     update_data = {k: v for k, v in ws.model_dump().items() if v is not None}
     if not update_data:
-        raise HTTPException(status_code=400, detail="No data to update")
-    try:
-        result = await workspace_service.update(workspace_id, update_data)
-        if not result:
-            raise HTTPException(status_code=404, detail="Workspace not found")
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise ValidationError("No data to update")
+    return await workspace_service.update(workspace_id, update_data)
 
 @router.delete("/{workspace_id}")
 async def delete_workspace(workspace_id: str, vault_delete: bool = False):
     if workspace_id == "default":
-        raise HTTPException(status_code=400, detail="Cannot delete default workspace")
+        raise ValidationError("Cannot delete default workspace")
     await workspace_service.delete(workspace_id, vault_delete=vault_delete)
     return {"status": "success", "message": f"Workspace {workspace_id} deleted"}
 
@@ -74,7 +66,7 @@ async def delete_workspace(workspace_id: str, vault_delete: bool = False):
 async def get_workspace_details(workspace_id: str):
     details = await workspace_service.get_details(workspace_id)
     if not details:
-        raise HTTPException(status_code=404, detail="Workspace not found")
+        raise NotFoundError(f"Workspace {workspace_id} not found")
     return details
 
 @router.post("/{workspace_id}/share-document")
@@ -84,7 +76,7 @@ async def share_document(workspace_id: str, request: Request):
     target_workspace_id = data.get("target_workspace_id")
     
     if not source_name or not target_workspace_id:
-        raise HTTPException(status_code=400, detail="source_name and target_workspace_id are required")
+        raise ValidationError("source_name and target_workspace_id are required")
     
     from backend.app.services.document_service import document_service
     await document_service.update_workspaces(source_name, target_workspace_id, "share")

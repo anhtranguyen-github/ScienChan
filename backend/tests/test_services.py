@@ -64,7 +64,7 @@ async def test_workspace_service_create(mocker):
     ws = await workspace_service.create({"name": "New Workspace", "description": "Description"})
     assert ws["name"] == "New Workspace"
     assert len(ws["id"]) == 8
-    mock_col.insert_one.assert_called_once()
+    assert mock_col.insert_one.call_count == 2
 
 @pytest.mark.asyncio
 async def test_document_service_delete(mocker):

@@ -13,7 +13,4 @@ async def get_settings(workspace_id: Optional[str] = Query(None)):
 @router.patch("/", response_model=AppSettings)
 async def update_settings(updates: Dict[str, Any], workspace_id: Optional[str] = Query(None)):
     """Update settings for a specific workspace or global defaults."""
-    try:
-        return await settings_manager.update_settings(updates, workspace_id)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return await settings_manager.update_settings(updates, workspace_id)

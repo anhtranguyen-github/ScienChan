@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from backend.app.services.task_service import task_service
 
+from backend.app.core.exceptions import NotFoundError
+
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 @router.get("/")
@@ -11,5 +13,5 @@ async def list_tasks(type: str = None):
 async def get_task_status(task_id: str):
     task = task_service.get_task(task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise NotFoundError(f"Task '{task_id}' not found")
     return task

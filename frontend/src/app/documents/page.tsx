@@ -219,6 +219,7 @@ export default function DocumentsPage() {
                                                         <div
                                                             onClick={() => handleSelectDoc(doc)}
                                                             data-testid="doc-name"
+                                                            data-doc-name={doc.name}
                                                             className="font-bold text-sm text-gray-200 group-hover:text-indigo-400 transition-colors uppercase tracking-tight cursor-pointer"
                                                         >
                                                             {doc.name}

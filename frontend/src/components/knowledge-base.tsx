@@ -5,7 +5,7 @@ import {
     Upload, FileText, Trash2, Loader2,
     Database, Search, Eye,
     Plus, Filter, Shield, ArrowRight, AlertTriangle,
-    ArrowRightLeft, Layers, X, Zap
+    ArrowRightLeft, Layers, X, Zap, ChevronDown
 } from 'lucide-react';
 import Link from 'next/link';
 import { API_ROUTES } from '@/lib/api-config';
@@ -44,6 +44,11 @@ interface BackendDocument {
     workspace_name?: string;
 }
 
+interface Workspace {
+    id: string;
+    name: string;
+}
+
 interface KnowledgeBaseProps {
     workspaceId?: string;
     isSidebar?: boolean;
@@ -65,6 +70,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
     const [managingDoc, setManagingDoc] = useState<Document | null>(null);
     const [manageMode, setManageMode] = useState<'move' | 'share'>('share');
     const [isManaging, setIsManaging] = useState(false);
+    const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
 
     // Poll for active tasks
     const fetchDocuments = React.useCallback(async () => {
@@ -116,15 +122,12 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                     );
 
                     for (const task of failedTasks) {
-                        const rawMessage = task.message || "";
-                        let displayMessage = "The system encountered an error while processing this document.";
                         let displayTitle = "Ingestion Failed";
+                        let displayMessage = task.message || "The system encountered an error while processing this document.";
 
-                        if (rawMessage.includes('illegal path')) {
+                        if (task.error_code === 'ILLEGAL_PATH') {
                             displayTitle = "Invalid Filename";
                             displayMessage = "The filename contains characters that are not allowed by the storage system.";
-                        } else if (rawMessage) {
-                            displayMessage = rawMessage;
                         }
 
                         showError(
@@ -155,9 +158,32 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
         }
     }, [workspaceId, fetchDocuments]);
 
+    useEffect(() => {
+        const fetchWorkspaces = async () => {
+            try {
+                const res = await fetch(API_ROUTES.WORKSPACES);
+                if (res.ok) {
+                    const data = await res.json();
+                    setWorkspaces(data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch workspaces', err);
+            }
+        };
+        fetchWorkspaces();
+    }, []);
+
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        // Optimistic Validation
+        const illegalChars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+        const found = illegalChars.filter(c => file.name.includes(c));
+        if (found.length > 0) {
+            showError("Invalid Filename", `The filename contains characters that are not allowed: ${found.join(' ')}. Please rename the file.`);
+            return;
+        }
 
         setIsUploading(true);
         setError(null);
@@ -174,15 +200,16 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                 // Task is now handled by the polling effect
                 await res.json();
             } else {
-                const errorData = await res.json();
-                const rawError = errorData.detail || 'Upload failed';
-
+                const data = await res.json();
                 let title = "Ingestion Rejected";
-                let message = rawError;
+                let message = data.detail || 'Upload failed';
 
-                if (rawError.includes('illegal path')) {
+                if (data.code === 'VALIDATION_ERROR') {
                     title = "Invalid Filename";
-                    message = "The filename contains characters that are not allowed. Please rename the file and try again.";
+                    message = data.detail;
+                } else if (data.code === 'CONFLICT_ERROR') {
+                    title = "Duplicate Document";
+                    message = "A document with this name already exists in this workspace.";
                 }
 
                 setError(message);
@@ -286,7 +313,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                 <div className="flex-1 overflow-y-auto space-y-1 px-1 custom-scrollbar">
                     {documents.map((doc) => (
                         <div
-                            key={doc.name}
+                            key={doc.id || `${doc.name}-${doc.workspace_id}`}
                             className="group flex items-center justify-between p-2.5 rounded-xl hover:bg-white/5 transition-all relative border border-transparent hover:border-white/5"
                         >
                             <div className="flex items-center gap-3 overflow-hidden">
@@ -446,7 +473,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
 
                         return filtered.map((doc, idx) => (
                             <motion.div
-                                key={doc.name}
+                                key={doc.id || `${doc.name}-${doc.workspace_id}`}
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: idx * 0.05 }}
@@ -457,7 +484,13 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                                         <FileText className="w-6 h-6 text-gray-600 group-hover:text-indigo-400 transition-colors" />
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className="text-sm font-black text-white truncate max-w-[200px] uppercase tracking-tight">{doc.name}</span>
+                                        <span
+                                            data-testid="doc-name"
+                                            data-doc-name={doc.name}
+                                            className="text-sm font-black text-white truncate max-w-[200px] uppercase tracking-tight"
+                                        >
+                                            {doc.name}
+                                        </span>
                                         <div className="flex items-center gap-3 mt-1">
                                             <span className="text-[10px] font-mono text-gray-600 uppercase">{doc.extension?.replace('.', '') || 'FILE'}</span>
                                             <span className="w-1 h-1 rounded-full bg-gray-800" />
@@ -502,6 +535,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
 
                                     <button
                                         onClick={() => setDeletingDoc(doc)}
+                                        data-testid={`delete-doc-${doc.name}`}
                                         className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white/5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-90"
                                         title="Purge Document"
                                     >
@@ -605,14 +639,26 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                                 </div>
 
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Target Cluster ID</label>
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Target Cluster (Workspace)</label>
                                     <div className="flex gap-4">
-                                        <input
-                                            placeholder="e.g. workspace-001"
-                                            value={shareTarget}
-                                            onChange={(e) => setShareTarget(e.target.value)}
-                                            className="flex-1 bg-[#0a0a0b] border border-white/10 rounded-2xl px-6 h-14 text-sm text-white focus:ring-2 ring-indigo-500/20 outline-none placeholder:text-gray-700 font-medium"
-                                        />
+                                        <div className="flex-1 relative group">
+                                            <select
+                                                value={shareTarget}
+                                                onChange={(e) => setShareTarget(e.target.value)}
+                                                className="w-full bg-[#0a0a0b] border border-white/10 rounded-2xl px-6 h-14 text-sm text-white focus:ring-2 ring-indigo-500/20 outline-none appearance-none font-medium cursor-pointer transition-all hover:border-white/20"
+                                            >
+                                                <option value="" disabled className="bg-[#121214]">Select target workspace...</option>
+                                                {workspaces
+                                                    .filter(ws => ws.id !== (managingDoc?.workspace_id || workspaceId))
+                                                    .map(ws => (
+                                                        <option key={ws.id} value={ws.id} className="bg-[#121214]">
+                                                            {ws.name} ({ws.id})
+                                                        </option>
+                                                    ))
+                                                }
+                                            </select>
+                                            <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none group-hover:text-gray-400 transition-colors" size={16} />
+                                        </div>
                                         <button
                                             onClick={handleManage}
                                             disabled={!shareTarget || isManaging}
@@ -664,6 +710,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                                     </button>
                                     <button
                                         onClick={() => handleDelete(deletingDoc.name, true)}
+                                        data-testid="confirm-purge-btn"
                                         className="w-full py-5 rounded-2xl bg-red-500 text-black hover:bg-red-400 transition-all text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-red-500/20"
                                     >
                                         Purge Entirely from Global Vault
