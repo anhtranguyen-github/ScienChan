@@ -27,7 +27,7 @@ export function ChatMessage({ message, isLoading, onCitationClick }: ChatMessage
                     <button
                         key={i}
                         onClick={() => onCitationClick(id)}
-                        className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-md mx-0.5 hover:bg-blue-600/40 hover:text-white transition-all transform hover:-translate-y-0.5 active:scale-90"
+                        className="inline-flex items-center justify-center w-5 h-5 text-tiny font-bold bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-md mx-0.5 hover:bg-blue-600/40 hover:text-white transition-all transform hover:-translate-y-0.5 active:scale-90"
                     >
                         {id}
                     </button>
@@ -58,7 +58,7 @@ export function ChatMessage({ message, isLoading, onCitationClick }: ChatMessage
                     <div className="flex flex-col gap-2 mb-1">
                         <div className="flex flex-wrap gap-2">
                             {message.tools?.map((tool, idx) => (
-                                <span key={idx} className="text-[11px] font-bold px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-sm">
+                                <span key={idx} className="text-tiny font-bold px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-sm">
                                     {tool}
                                 </span>
                             ))}
@@ -68,11 +68,11 @@ export function ChatMessage({ message, isLoading, onCitationClick }: ChatMessage
                             <div className="w-full mt-1 overflow-hidden transition-all duration-300">
                                 <button
                                     onClick={() => setIsExpanded(!isExpanded)}
-                                    className="flex items-center gap-2 text-indigo-400 font-bold uppercase tracking-tighter text-[10px] hover:text-indigo-300 transition-colors py-1 focus:outline-none"
+                                    className="flex items-center gap-2 text-indigo-400 font-bold uppercase tracking-tighter text-tiny hover:text-indigo-300 transition-colors py-1 focus:outline-none"
                                 >
                                     <span>Thinking Process:</span>
                                     {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                    <span className="text-[9px] font-normal opacity-50 ml-1">
+                                    <span className="text-tiny font-normal opacity-50 ml-1">
                                         ({message.reasoning_steps?.length} steps)
                                     </span>
                                 </button>
@@ -85,7 +85,7 @@ export function ChatMessage({ message, isLoading, onCitationClick }: ChatMessage
                                             exit={{ height: 0, opacity: 0 }}
                                             className="overflow-hidden"
                                         >
-                                            <div className="mt-2 p-4 rounded-xl bg-white/5 border border-white/5 text-[12px] text-gray-400 font-medium shadow-inner ring-1 ring-white/5">
+                                            <div className="mt-2 p-4 rounded-xl bg-white/5 border border-white/5 text-caption text-gray-400 font-medium shadow-inner ring-1 ring-white/5">
                                                 <ul className="space-y-2">
                                                     {message.reasoning_steps?.map((step, idx) => (
                                                         <li key={idx} className="flex gap-3 items-start">
@@ -104,7 +104,7 @@ export function ChatMessage({ message, isLoading, onCitationClick }: ChatMessage
                 )}
 
                 <div className={cn(
-                    "p-6 rounded-3xl leading-relaxed text-[15px] shadow-sm whitespace-pre-wrap transition-all",
+                    "p-6 rounded-3xl leading-relaxed text-body shadow-sm whitespace-pre-wrap transition-all",
                     message.role === 'user'
                         ? "bg-[#1e1e21] border border-purple-500/20 text-gray-100 rounded-tr-none"
                         : "bg-[#161619] border border-white/5 text-gray-200 rounded-tl-none"

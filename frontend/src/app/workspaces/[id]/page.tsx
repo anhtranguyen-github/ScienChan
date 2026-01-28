@@ -97,13 +97,13 @@ export default function WorkspaceOverviewPage() {
                 {/* Header */}
                 <div className="flex items-start justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-white">{workspace.name}</h1>
+                        <h1 className="text-h3 font-bold text-white">{workspace.name}</h1>
                         <p className="text-gray-500 mt-1">
                             {workspace.description || `Workspace ID: ${workspace.id}`}
                         </p>
                     </div>
                     {workspace.id === 'default' && (
-                        <span className="px-3 py-1 rounded-full bg-gray-500/20 text-gray-400 text-xs font-medium">
+                        <span className="px-3 py-1 rounded-full bg-gray-500/20 text-gray-400 text-tiny font-medium">
                             System Default
                         </span>
                     )}
@@ -161,11 +161,11 @@ export default function WorkspaceOverviewPage() {
 
                 {/* Configuration Summary */}
                 <div className="bg-[#121214] rounded-xl border border-white/5 p-5">
-                    <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                    <h3 className="text-caption font-semibold text-gray-300 mb-4 flex items-center gap-2">
                         <Settings size={16} className="text-gray-500" />
                         Current Configuration
                     </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-caption">
                         <ConfigItem label="LLM Provider" value={workspace.settings.llm_provider} />
                         <ConfigItem label="LLM Model" value={workspace.settings.llm_model} />
                         <ConfigItem label="Embedding" value={workspace.settings.embedding_model} />
@@ -180,19 +180,19 @@ export default function WorkspaceOverviewPage() {
                     {/* Recent Threads */}
                     <div className="bg-[#121214] rounded-xl border border-white/5 p-5">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                            <h3 className="text-caption font-semibold text-gray-300 flex items-center gap-2">
                                 <Clock size={16} className="text-gray-500" />
                                 Recent Chats
                             </h3>
                             <Link
                                 href={`/workspaces/${workspaceId}/chat`}
-                                className="text-xs text-blue-400 hover:underline"
+                                className="text-tiny text-blue-400 hover:underline"
                             >
                                 View All
                             </Link>
                         </div>
                         {workspace.threads.length === 0 ? (
-                            <p className="text-sm text-gray-600">No chat history yet</p>
+                            <p className="text-caption text-gray-600">No chat history yet</p>
                         ) : (
                             <div className="space-y-2">
                                 {workspace.threads.slice(0, 5).map((thread: Thread) => (
@@ -202,7 +202,7 @@ export default function WorkspaceOverviewPage() {
                                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-all"
                                     >
                                         <MessageSquare size={14} className="text-gray-500" />
-                                        <span className="text-sm text-gray-300 truncate flex-1">
+                                        <span className="text-caption text-gray-300 truncate flex-1">
                                             {thread.title || `Chat ${thread.id}`}
                                         </span>
                                         <ArrowRight size={14} className="text-gray-600" />
@@ -215,19 +215,19 @@ export default function WorkspaceOverviewPage() {
                     {/* Recent Documents */}
                     <div className="bg-[#121214] rounded-xl border border-white/5 p-5">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                            <h3 className="text-caption font-semibold text-gray-300 flex items-center gap-2">
                                 <FileText size={16} className="text-gray-500" />
                                 Recent Documents
                             </h3>
                             <Link
                                 href={`/workspaces/${workspaceId}/documents`}
-                                className="text-xs text-blue-400 hover:underline"
+                                className="text-tiny text-blue-400 hover:underline"
                             >
                                 View All
                             </Link>
                         </div>
                         {workspace.documents.length === 0 ? (
-                            <p className="text-sm text-gray-600">No documents uploaded yet</p>
+                            <p className="text-caption text-gray-600">No documents uploaded yet</p>
                         ) : (
                             <div className="space-y-2">
                                 {workspace.documents.slice(0, 5).map((doc: DocumentSummary) => (
@@ -237,11 +237,11 @@ export default function WorkspaceOverviewPage() {
                                         className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-all"
                                     >
                                         <FileText size={14} className="text-gray-500" />
-                                        <span className="text-sm text-gray-300 truncate flex-1">
+                                        <span className="text-caption text-gray-300 truncate flex-1">
                                             {doc.name || doc.filename}
                                         </span>
                                         <span className={cn(
-                                            "text-xs px-2 py-0.5 rounded",
+                                            "text-tiny px-2 py-0.5 rounded",
                                             doc.status === 'indexed' ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
                                         )}>
                                             {doc.status}
@@ -270,8 +270,8 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: s
             <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center mb-3", colorClasses[color])}>
                 <Icon size={20} />
             </div>
-            <div className="text-2xl font-bold text-white">{value}</div>
-            <div className="text-xs text-gray-500 uppercase">{label}</div>
+            <div className="text-h3 font-bold text-white">{value}</div>
+            <div className="text-tiny text-gray-500 uppercase">{label}</div>
         </div>
     );
 }
@@ -287,7 +287,7 @@ function ActionCard({ href, title, description, icon: Icon }: { href: string; ti
             </div>
             <div className="flex-1">
                 <h4 className="text-white font-medium">{title}</h4>
-                <p className="text-sm text-gray-500">{description}</p>
+                <p className="text-caption text-gray-500">{description}</p>
             </div>
             <ArrowRight size={16} className="text-gray-600 group-hover:text-blue-400 transition-all" />
         </Link>
@@ -297,7 +297,7 @@ function ActionCard({ href, title, description, icon: Icon }: { href: string; ti
 function ConfigItem({ label, value }: { label: string; value: string }) {
     return (
         <div>
-            <div className="text-[10px] text-gray-600 uppercase">{label}</div>
+            <div className="text-tiny text-gray-600 uppercase">{label}</div>
             <div className="text-gray-300">{value}</div>
         </div>
     );

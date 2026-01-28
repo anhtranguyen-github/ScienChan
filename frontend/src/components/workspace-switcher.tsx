@@ -46,10 +46,10 @@ export function WorkspaceSwitcher({
                 className="flex items-center justify-between w-full p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group"
             >
                 <div className="flex items-center gap-2 overflow-hidden">
-                    <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                    <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center text-white text-tiny font-bold shrink-0">
                         {currentWorkspace?.name?.[0].toUpperCase() || 'W'}
                     </div>
-                    <span className="text-xs font-bold truncate text-gray-300">
+                    <span className="text-tiny font-bold truncate text-gray-300">
                         {currentWorkspace?.name || 'Workspace'}
                     </span>
                 </div>
@@ -82,8 +82,8 @@ export function WorkspaceSwitcher({
                                         )}
                                     >
                                         <div className="flex flex-col items-start gap-0.5 overflow-hidden">
-                                            <span className="text-sm font-medium truncate">{ws.name}</span>
-                                            <span className="text-[10px] opacity-50 font-mono uppercase tracking-tighter">{ws.id}</span>
+                                            <span className="text-caption font-medium truncate">{ws.name}</span>
+                                            <span className="text-tiny opacity-50 uppercase tracking-tighter">{ws.id}</span>
                                         </div>
                                         {ws.id === currentWorkspace?.id && <Check size={14} />}
                                     </button>
@@ -99,21 +99,21 @@ export function WorkspaceSwitcher({
                                             onChange={(e) => setNewWsName(e.target.value)}
                                             placeholder="Workspace name..."
                                             className={cn(
-                                                "w-full bg-[#0a0a0b] border rounded-xl px-3 py-2 text-sm focus:ring-1 outline-none transition-all",
+                                                "w-full bg-[#0a0a0b] border rounded-xl px-3 py-2 text-caption focus:ring-1 outline-none transition-all",
                                                 error ? "border-red-500/50 ring-red-500/50" : "border-white/10 ring-indigo-500"
                                             )}
                                         />
                                         <div className="flex gap-2">
                                             <button
                                                 type="submit"
-                                                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-lg transition-all"
+                                                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-tiny font-bold py-2 rounded-lg transition-all"
                                             >
                                                 Create
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setIsCreating(false)}
-                                                className="flex-1 bg-white/5 hover:bg-white/10 text-gray-400 text-xs font-bold py-2 rounded-lg transition-all"
+                                                className="flex-1 bg-white/5 hover:bg-white/10 text-gray-400 text-tiny font-bold py-2 rounded-lg transition-all"
                                             >
                                                 Cancel
                                             </button>
@@ -123,14 +123,14 @@ export function WorkspaceSwitcher({
                                     <div className="flex flex-col gap-1">
                                         <button
                                             onClick={() => setIsCreating(true)}
-                                            className="flex items-center gap-2 w-full p-3 rounded-xl hover:bg-white/5 text-xs font-bold text-indigo-400 transition-all"
+                                            className="flex items-center gap-2 w-full p-3 rounded-xl hover:bg-white/5 text-tiny font-bold text-indigo-400 transition-all"
                                         >
                                             <Plus size={14} />
                                             New Workspace
                                         </button>
                                         <Link
                                             href="/"
-                                            className="flex items-center gap-2 w-full p-3 rounded-xl hover:bg-white/5 text-xs font-bold text-gray-400 hover:text-white transition-all border-t border-white/5"
+                                            className="flex items-center gap-2 w-full p-3 rounded-xl hover:bg-white/5 text-tiny font-bold text-gray-400 hover:text-white transition-all border-t border-white/5"
                                         >
                                             <Layout size={14} />
                                             Select Workspace

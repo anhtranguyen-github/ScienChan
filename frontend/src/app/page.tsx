@@ -63,20 +63,20 @@ export default function HomePage() {
       <header className="border-b border-white/10 px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold">Workspaces</h1>
-            <p className="text-sm text-gray-500">Select or create a workspace to begin</p>
+            <h1 className="text-h3 font-bold">Workspaces</h1>
+            <p className="text-caption text-gray-500">Select or create a workspace to begin</p>
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/vault"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-gray-300 text-sm font-medium transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-gray-300 text-caption font-medium transition-all"
             >
               <Database size={16} />
               Intelligence Vault
             </Link>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-medium transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-caption font-medium transition-all"
             >
               <Plus size={16} />
               New Workspace
@@ -95,7 +95,7 @@ export default function HomePage() {
             placeholder="Search workspaces..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-2 ring-blue-500/50"
+            className="w-full pl-12 pr-4 py-3 rounded-lg bg-white/5 border border-white/10 text-caption focus:outline-none focus:ring-2 ring-blue-500/50"
           />
         </div>
 
@@ -103,7 +103,7 @@ export default function HomePage() {
         {error && (
           <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-3">
             <AlertCircle size={16} className="text-red-500" />
-            <span className="text-red-400 text-sm">{error}</span>
+            <span className="text-red-400 text-caption">{error}</span>
           </div>
         )}
 
@@ -117,7 +117,7 @@ export default function HomePage() {
             <p className="text-gray-400 mb-4">No workspaces found</p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm"
+              className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-caption"
             >
               Create your first workspace
             </button>
@@ -139,14 +139,14 @@ export default function HomePage() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold",
+                        "w-10 h-10 rounded-lg flex items-center justify-center text-caption font-bold",
                         ws.id === 'default' ? "bg-gray-600" : "bg-blue-600"
                       )}>
                         {ws.name[0].toUpperCase()}
                       </div>
                       <div>
                         <h3 className="font-medium text-white">{ws.name}</h3>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-tiny text-gray-500">
                           {ws.id === 'default' ? 'System Default' : `ID: ${ws.id}`}
                         </p>
                       </div>
@@ -173,10 +173,10 @@ export default function HomePage() {
                 {/* Card Body */}
                 <div className="p-4">
                   {ws.description && (
-                    <p className="text-sm text-gray-400 mb-3 line-clamp-2">{ws.description}</p>
+                    <p className="text-caption text-gray-400 mb-3 line-clamp-2">{ws.description}</p>
                   )}
 
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <div className="flex items-center gap-4 text-tiny text-gray-500">
                     <span className="flex items-center gap-1">
                       <FileText size={12} />
                       {ws.stats?.doc_count || 0} docs
@@ -202,7 +202,7 @@ export default function HomePage() {
           />
           <div className="relative bg-[#0f0f10] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">Create Workspace</h3>
+              <h3 className="text-h3 font-bold text-white">Create Workspace</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"
@@ -213,30 +213,30 @@ export default function HomePage() {
 
             <form onSubmit={handleCreate} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Workspace Name *</label>
+                <label className="block text-caption text-gray-400 mb-2">Workspace Name *</label>
                 <input
                   type="text"
                   value={newWorkspace.name}
                   onChange={(e) => setNewWorkspace({ ...newWorkspace, name: e.target.value })}
                   placeholder="e.g., Project Research"
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-2 ring-blue-500/50"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-caption focus:outline-none focus:ring-2 ring-blue-500/50"
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Description</label>
+                <label className="block text-caption text-gray-400 mb-2">Description</label>
                 <textarea
                   value={newWorkspace.description}
                   onChange={(e) => setNewWorkspace({ ...newWorkspace, description: e.target.value })}
                   placeholder="Optional description..."
                   rows={2}
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-2 ring-blue-500/50 resize-none"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-caption focus:outline-none focus:ring-2 ring-blue-500/50 resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">RAG Engine</label>
+                <label className="block text-caption text-gray-400 mb-2">RAG Engine</label>
                 <div className="flex gap-3">
                   {['basic', 'graph'].map((engine) => (
                     <button
@@ -244,7 +244,7 @@ export default function HomePage() {
                       type="button"
                       onClick={() => setNewWorkspace({ ...newWorkspace, rag_engine: engine })}
                       className={cn(
-                        "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all text-sm",
+                        "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all text-caption",
                         newWorkspace.rag_engine === engine
                           ? "bg-blue-600/20 border-blue-500/50 text-blue-400"
                           : "bg-white/5 border-white/10 text-gray-400"
@@ -261,14 +261,14 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-gray-300"
+                  className="flex-1 px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-caption font-medium text-gray-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!newWorkspace.name.trim() || isCreating}
-                  className="flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-sm font-medium flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-caption font-medium flex items-center justify-center gap-2"
                 >
                   {isCreating ? (
                     <Loader2 size={16} className="animate-spin" />

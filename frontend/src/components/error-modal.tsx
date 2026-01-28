@@ -40,8 +40,8 @@ export function ErrorModal({ isOpen, onClose, title = "System Notification", mes
                                     <ShieldAlert className="text-red-500 w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-white tracking-tight">{title}</h2>
-                                    <p className="text-[10px] text-red-400 font-bold uppercase tracking-widest">Action Required</p>
+                                    <h2 className="text-h3 font-bold text-white tracking-tight">{title}</h2>
+                                    <p className="text-tiny text-red-400 font-bold uppercase tracking-widest">Action Required</p>
                                 </div>
                             </div>
 
@@ -51,7 +51,7 @@ export function ErrorModal({ isOpen, onClose, title = "System Notification", mes
                                 </p>
 
                                 {details && (
-                                    <div className="p-4 bg-black/40 rounded-2xl border border-white/5 font-mono text-[11px] text-gray-500 break-all flex gap-3">
+                                    <div className="p-4 bg-black/40 rounded-2xl border border-white/5 text-tiny text-gray-500 break-all flex gap-3">
                                         <Terminal size={14} className="shrink-0 mt-0.5" />
                                         <span>{details}</span>
                                     </div>
@@ -61,7 +61,7 @@ export function ErrorModal({ isOpen, onClose, title = "System Notification", mes
                             <div className="mt-8 flex gap-3">
                                 <button
                                     onClick={onClose}
-                                    className="flex-1 bg-white text-black hover:bg-gray-200 transition-all py-3 rounded-xl text-sm font-bold active:scale-95"
+                                    className="flex-1 bg-white text-black hover:bg-gray-200 transition-all py-3 rounded-xl text-caption font-bold active:scale-95"
                                 >
                                     Acknowledge
                                 </button>

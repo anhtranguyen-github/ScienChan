@@ -22,15 +22,15 @@ export function ChunkCard({ chunk, className }: ChunkCardProps) {
         )}>
             <div className="px-4 py-2 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center text-blue-500 text-[10px] font-bold">
+                    <div className="w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center text-blue-500 text-tiny font-bold">
                         #{chunk.index + 1}
                     </div>
-                    <span className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">
+                    <span className="text-tiny text-gray-500 uppercase tracking-wider">
                         ID: {chunk.id.slice(0, 8)}...
                     </span>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 text-[10px] text-gray-600">
+                    <div className="flex items-center gap-1 text-tiny text-gray-600">
                         <Type size={10} />
                         <span>{chunk.text.length} chars</span>
                     </div>
@@ -38,7 +38,7 @@ export function ChunkCard({ chunk, className }: ChunkCardProps) {
             </div>
 
             <div className="p-4">
-                <p className="text-sm text-gray-300 leading-relaxed line-clamp-6 group-hover:line-clamp-none transition-all duration-500">
+                <p className="text-caption text-gray-300 leading-relaxed line-clamp-6 group-hover:line-clamp-none transition-all duration-500">
                     {chunk.text}
                 </p>
             </div>
@@ -48,7 +48,7 @@ export function ChunkCard({ chunk, className }: ChunkCardProps) {
                     {Object.entries(chunk.metadata).map(([key, value]) => {
                         if (typeof value === 'object' || key === 'text' || key === 'doc_id' || key === 'index') return null;
                         return (
-                            <div key={key} className="px-2 py-0.5 rounded bg-white/5 text-[9px] text-gray-500 border border-white/5">
+                            <div key={key} className="px-2 py-0.5 rounded bg-white/5 text-tiny text-gray-500 border border-white/5">
                                 <span className="text-gray-600 uppercase mr-1">{key}:</span>
                                 {String(value)}
                             </div>

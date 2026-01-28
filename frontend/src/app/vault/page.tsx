@@ -20,10 +20,10 @@ export default function GlobalVaultPage() {
                         <Database size={22} />
                     </div>
                     <div>
-                        <h2 className="text-lg font-black tracking-tight uppercase">Master Intelligence Vault</h2>
+                        <h2 className="text-h3 font-black tracking-tight uppercase">Master Intelligence Vault</h2>
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Cross-Workspace Management Console</span>
+                            <span className="text-tiny text-gray-500 font-bold uppercase tracking-widest">Cross-Workspace Management Console</span>
                         </div>
                     </div>
                 </div>
@@ -31,7 +31,7 @@ export default function GlobalVaultPage() {
                 <div className="flex gap-4">
                     <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/5">
                         <Shield size={14} className="text-emerald-500" />
-                        <span className="text-[10px] font-black text-gray-600 uppercase">Global Access Encryption</span>
+                        <span className="text-tiny font-black text-gray-600 uppercase">Global Access Encryption</span>
                     </div>
                 </div>
             </header>
@@ -50,10 +50,10 @@ export default function GlobalVaultPage() {
                             </div>
                             <div className="flex items-center gap-3 text-gray-500">
                                 <Layers size={18} />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Universal Shards</span>
+                                <span className="text-tiny font-black uppercase tracking-[0.2em]">Universal Shards</span>
                             </div>
-                            <div className="text-3xl font-black text-white">FEDERATED</div>
-                            <div className="text-[10px] text-gray-600 font-bold leading-relaxed">Aggregated document indices from all active neural nodes.</div>
+                            <div className="text-h2 font-black text-white">FEDERATED</div>
+                            <div className="text-tiny text-gray-600 font-bold leading-relaxed">Aggregated document indices from all active neural nodes.</div>
                         </motion.div>
 
                         <motion.div
@@ -67,10 +67,10 @@ export default function GlobalVaultPage() {
                             </div>
                             <div className="flex items-center gap-3 text-gray-500">
                                 <HardDrive size={18} />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Storage Cluster</span>
+                                <span className="text-tiny font-black uppercase tracking-[0.2em]">Storage Cluster</span>
                             </div>
-                            <div className="text-3xl font-black text-white">REDUNDANT</div>
-                            <div className="text-[10px] text-gray-600 font-bold leading-relaxed">Multi-workspace binary persistence via MinIO S3 layer.</div>
+                            <div className="text-h2 font-black text-white">REDUNDANT</div>
+                            <div className="text-tiny text-gray-600 font-bold leading-relaxed">Multi-workspace binary persistence via MinIO S3 layer.</div>
                         </motion.div>
 
                         <motion.div
@@ -84,10 +84,10 @@ export default function GlobalVaultPage() {
                             </div>
                             <div className="flex items-center gap-3 text-indigo-400">
                                 <Database size={18} />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Vector Fabric</span>
+                                <span className="text-tiny font-black uppercase tracking-[0.2em]">Vector Fabric</span>
                             </div>
-                            <div className="text-3xl font-black text-indigo-500 uppercase tracking-tighter">Unified</div>
-                            <div className="text-[10px] text-indigo-400/50 font-bold leading-relaxed">Global document namespace with distinct isolation protocols.</div>
+                            <div className="text-h2 font-black text-indigo-500 uppercase tracking-tighter">Unified</div>
+                            <div className="text-tiny text-indigo-400/50 font-bold leading-relaxed">Global document namespace with distinct isolation protocols.</div>
                         </motion.div>
                     </div>
 

@@ -159,7 +159,7 @@ export default function ChatPage() {
                         <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
                             <History size={18} className="text-blue-500" />
                         </div>
-                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">Archive</h3>
+                        <h3 className="text-caption font-bold text-white uppercase tracking-widest">Archive</h3>
                     </div>
                     <button
                         onClick={() => setShowHistory(false)}
@@ -172,7 +172,7 @@ export default function ChatPage() {
                 <div className="p-4">
                     <button
                         onClick={startNewChat}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-all shadow-lg shadow-blue-600/20"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-caption font-bold transition-all shadow-lg shadow-blue-600/20"
                     >
                         <Plus size={18} />
                         New Conversation
@@ -183,14 +183,14 @@ export default function ChatPage() {
                     {isLoadingThreads ? (
                         <div className="flex flex-col items-center justify-center py-12 gap-3 text-gray-500">
                             <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                            <span className="text-xs font-medium uppercase tracking-tighter">Indexing Threads...</span>
+                            <span className="text-tiny font-medium uppercase tracking-tighter">Indexing Threads...</span>
                         </div>
                     ) : threads.length === 0 ? (
                         <div className="text-center py-12 px-6">
                             <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
                                 <MessageSquare size={20} className="text-gray-700" />
                             </div>
-                            <p className="text-gray-500 text-xs font-medium">Your conversation history will appear here.</p>
+                            <p className="text-gray-500 text-tiny font-medium">Your conversation history will appear here.</p>
                         </div>
                     ) : (
                         <div className="space-y-2">
@@ -211,11 +211,11 @@ export default function ChatPage() {
                                                 "w-1.5 h-1.5 rounded-full",
                                                 threadId === thread.id ? "bg-blue-500 shadow-[0_0_5px_#3b82f6]" : "bg-gray-700"
                                             )} />
-                                            <p className="text-sm font-semibold truncate">
+                                            <p className="text-caption font-semibold truncate">
                                                 {thread.title || 'Untitled Session'}
                                             </p>
                                         </div>
-                                        <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
+                                        <div className="flex items-center gap-2 text-tiny text-gray-500 font-medium">
                                             <span>{formatDate(thread.last_active)}</span>
                                             <span className="w-1 h-1 rounded-full bg-gray-800" />
                                             <span>{thread.message_count} messages</span>
@@ -249,14 +249,14 @@ export default function ChatPage() {
                             )}
                         >
                             <History size={18} />
-                            <span className="text-sm font-medium">History</span>
+                            <span className="text-caption font-medium">History</span>
                         </button>
 
                         <div className="h-4 w-px bg-white/10" />
 
                         <div className="flex flex-col">
-                            <h2 className="text-sm font-semibold text-white">Chat Session</h2>
-                            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Workspace: {workspaceId}</p>
+                            <h2 className="text-caption font-semibold text-white">Chat Session</h2>
+                            <p className="text-tiny text-gray-500 uppercase tracking-wider">Workspace: {workspaceId}</p>
                         </div>
                     </div>
 
@@ -264,7 +264,7 @@ export default function ChatPage() {
                         {threadId && (
                             <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                <span className="text-[10px] text-blue-400 font-mono">ID: {threadId.substring(0, 8)}</span>
+                                <span className="text-tiny text-blue-400">ID: {threadId.substring(0, 8)}</span>
                             </div>
                         )}
                         <button
@@ -284,7 +284,7 @@ export default function ChatPage() {
                             <div className="w-16 h-16 rounded-2xl bg-blue-600/20 flex items-center justify-center mb-4">
                                 <Bot size={32} className="text-blue-500" />
                             </div>
-                            <h2 className="text-xl font-bold text-white mb-2">Start a Conversation</h2>
+                            <h2 className="text-h3 font-bold text-white mb-2">Start a Conversation</h2>
                             <p className="text-gray-500 max-w-md">
                                 Ask questions about your documents. Citations will appear inline when knowledge is retrieved.
                             </p>
@@ -295,7 +295,7 @@ export default function ChatPage() {
                                     <button
                                         key={prompt}
                                         onClick={() => sendMessage(prompt)}
-                                        className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm text-gray-400 hover:text-white transition-all text-left"
+                                        className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-caption text-gray-400 hover:text-white transition-all text-left"
                                     >
                                         {prompt}
                                     </button>
@@ -320,7 +320,7 @@ export default function ChatPage() {
                             <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
                                 <Loader2 size={16} className="text-blue-500 animate-spin" />
                             </div>
-                            <span className="text-sm">
+                            <span className="text-caption">
                                 {mode === 'reasoning' ? 'Reasoning...' : mode === 'thinking' ? 'Thinking...' : 'Processing...'}
                             </span>
                         </div>
@@ -338,7 +338,7 @@ export default function ChatPage() {
                                         key={opt.id}
                                         onClick={() => handleModeChange(opt.id as ChatMode)}
                                         className={cn(
-                                            "flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all group relative",
+                                            "flex items-center gap-3 px-4 py-2 rounded-lg text-caption transition-all group relative",
                                             mode === opt.id
                                                 ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
                                                 : "text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent"
@@ -364,7 +364,7 @@ export default function ChatPage() {
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     placeholder={`Message in ${mode} mode...`}
-                                    className="flex-1 bg-transparent border-none focus:outline-none py-3 px-2 text-white placeholder:text-gray-600 text-sm"
+                                    className="flex-1 bg-transparent border-none focus:outline-none py-3 px-2 text-white placeholder:text-gray-600 text-caption"
                                     disabled={isLoading}
                                 />
                                 <button
@@ -385,7 +385,7 @@ export default function ChatPage() {
                                     )}
                                 </button>
                             </div>
-                            <p className="mt-3 text-[10px] text-center text-gray-600 uppercase tracking-[0.2em] font-medium">
+                            <p className="mt-3 text-tiny text-center text-gray-600 uppercase tracking-[0.2em] font-medium">
                                 Press Enter to send • {modeOptions.find(o => o.id === mode)?.description}
                             </p>
                         </form>

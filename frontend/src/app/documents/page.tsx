@@ -105,7 +105,7 @@ export default function DocumentsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#0a0a0b] text-white font-sans selection:bg-indigo-500/30 overflow-x-hidden">
+        <div className="min-h-screen bg-[#0a0a0b] text-white selection:bg-indigo-500/30 overflow-x-hidden">
             {/* Background Decor */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full" />
@@ -123,7 +123,7 @@ export default function DocumentsPage() {
                             <ChevronLeft size={20} />
                         </Link>
                         <div>
-                            <h1 className="text-4xl font-black tracking-tight">Knowledge Bank</h1>
+                            <h1 className="text-h1 font-black tracking-tight">Knowledge Bank</h1>
                             <p className="text-gray-500 mt-1">Global document assets and cross-workspace orchestration.</p>
                         </div>
                     </div>
@@ -136,14 +136,14 @@ export default function DocumentsPage() {
                                 placeholder="Search resources..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="bg-[#121214] border border-white/5 rounded-2xl pl-12 pr-6 py-3 w-64 focus:w-80 outline-none focus:ring-2 ring-indigo-500/20 transition-all placeholder:text-gray-700 text-sm"
+                                className="bg-[#121214] border border-white/5 rounded-2xl pl-12 pr-6 py-3 w-64 focus:w-80 outline-none focus:ring-2 ring-indigo-500/20 transition-all placeholder:text-gray-700 text-caption"
                             />
                         </div>
 
                         <select
                             value={filterWorkspace}
                             onChange={(e) => setFilterWorkspace(e.target.value)}
-                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-400 font-bold uppercase tracking-tighter"
+                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-caption outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-400 font-bold uppercase tracking-tighter"
                         >
                             <option value="all">Everywhere</option>
                             {workspaces.map(ws => (
@@ -154,7 +154,7 @@ export default function DocumentsPage() {
                         <select
                             value={filterExtension}
                             onChange={(e) => setFilterExtension(e.target.value)}
-                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-400 font-bold uppercase tracking-tighter"
+                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-caption outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-400 font-bold uppercase tracking-tighter"
                         >
                             <option value="all">Formats</option>
                             {extensions.map(ext => (
@@ -165,7 +165,7 @@ export default function DocumentsPage() {
                         <select
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
-                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-400 font-bold uppercase tracking-tighter"
+                            className="bg-[#121214] border border-white/5 rounded-2xl px-4 py-3 text-caption outline-none focus:ring-2 ring-indigo-500/20 transition-all text-gray-400 font-bold uppercase tracking-tighter"
                         >
                             <option value="all">Health</option>
                             <option value="ready">Ready</option>
@@ -181,11 +181,11 @@ export default function DocumentsPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-white/[0.02] border-b border-white/5">
-                                    <th className="px-8 py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Document Name</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Primary Workspace</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Distribution</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Assets</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] text-right pr-12">Actions</th>
+                                    <th className="px-8 py-6 text-tiny font-black text-gray-500 uppercase tracking-[0.2em]">Document Name</th>
+                                    <th className="px-8 py-6 text-tiny font-black text-gray-500 uppercase tracking-[0.2em]">Primary Workspace</th>
+                                    <th className="px-8 py-6 text-tiny font-black text-gray-500 uppercase tracking-[0.2em]">Distribution</th>
+                                    <th className="px-8 py-6 text-tiny font-black text-gray-500 uppercase tracking-[0.2em]">Assets</th>
+                                    <th className="px-8 py-6 text-tiny font-black text-gray-500 uppercase tracking-[0.2em] text-right pr-12">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -220,18 +220,18 @@ export default function DocumentsPage() {
                                                             onClick={() => handleSelectDoc(doc)}
                                                             data-testid="doc-name"
                                                             data-doc-name={doc.name}
-                                                            className="font-bold text-sm text-gray-200 group-hover:text-indigo-400 transition-colors uppercase tracking-tight cursor-pointer"
+                                                            className="font-bold text-caption text-gray-200 group-hover:text-indigo-400 transition-colors uppercase tracking-tight cursor-pointer"
                                                         >
                                                             {doc.name}
                                                         </div>
-                                                        <div className="text-[10px] text-gray-600 mt-1 uppercase font-black tracking-widest">{doc.extension}</div>
+                                                        <div className="text-tiny text-gray-600 mt-1 uppercase font-black tracking-widest">{doc.extension}</div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5 w-fit">
                                                     <Layers size={12} className="text-gray-500" />
-                                                    <span className="text-[11px] font-bold text-gray-400">
+                                                    <span className="text-tiny font-bold text-gray-400">
                                                         {workspaces.find(ws => ws.id === doc.workspace_id)?.name || doc.workspace_id}
                                                     </span>
                                                 </div>
@@ -241,18 +241,18 @@ export default function DocumentsPage() {
                                                     {doc.shared_with.length > 0 ? (
                                                         <div className="flex -space-x-2">
                                                             {doc.shared_with.slice(0, 3).map(wsId => (
-                                                                <div key={wsId} className="w-6 h-6 rounded-full bg-indigo-500 border-2 border-[#121214] flex items-center justify-center text-[8px] font-black text-white" title={wsId}>
+                                                                <div key={wsId} className="w-6 h-6 rounded-full bg-indigo-500 border-2 border-[#121214] flex items-center justify-center text-tiny font-black text-white" title={wsId}>
                                                                     {wsId[0].toUpperCase()}
                                                                 </div>
                                                             ))}
                                                             {doc.shared_with.length > 3 && (
-                                                                <div className="w-6 h-6 rounded-full bg-gray-800 border-2 border-[#121214] flex items-center justify-center text-[8px] font-black text-gray-400">
+                                                                <div className="w-6 h-6 rounded-full bg-gray-800 border-2 border-[#121214] flex items-center justify-center text-tiny font-black text-gray-400">
                                                                     +{doc.shared_with.length - 3}
                                                                 </div>
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <div className="flex items-center gap-2 text-[10px] text-gray-700 font-bold uppercase tracking-widest">
+                                                        <div className="flex items-center gap-2 text-tiny text-gray-700 font-bold uppercase tracking-widest">
                                                             <Globe size={10} />
                                                             Private
                                                         </div>
@@ -260,7 +260,7 @@ export default function DocumentsPage() {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
-                                                <div className="text-xs font-mono text-indigo-400/70">
+                                                <div className="text-tiny text-indigo-400/70">
                                                     {doc.chunks} Segments
                                                 </div>
                                             </td>
@@ -330,19 +330,19 @@ export default function DocumentsPage() {
                                     <Database size={32} />
                                 </div>
                                 <div className="flex-1">
-                                    <div className="flex items-center gap-3 text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">
+                                    <div className="flex items-center gap-3 text-tiny font-black text-gray-500 uppercase tracking-[0.2em] mb-1">
                                         <span>Inventory ID: {selectedDoc.workspace_id}</span>
                                         <span className="opacity-20">•</span>
                                         <span className="text-indigo-400">Knowledge Asset</span>
                                     </div>
-                                    <h2 className="text-2xl font-black uppercase tracking-tight truncate max-w-2xl">{selectedDoc.name}</h2>
+                                    <h2 className="text-h3 font-black uppercase tracking-tight truncate max-w-2xl">{selectedDoc.name}</h2>
                                 </div>
 
                                 <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5">
                                     <button
                                         onClick={() => setActiveTab('segments')}
                                         className={cn(
-                                            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                            "px-6 py-2.5 rounded-xl text-tiny font-black uppercase tracking-widest transition-all",
                                             activeTab === 'segments' ? "bg-indigo-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-300"
                                         )}
                                     >
@@ -351,7 +351,7 @@ export default function DocumentsPage() {
                                     <button
                                         onClick={() => setActiveTab('source')}
                                         className={cn(
-                                            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                            "px-6 py-2.5 rounded-xl text-tiny font-black uppercase tracking-widest transition-all",
                                             activeTab === 'source' ? "bg-indigo-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-300"
                                         )}
                                     >
@@ -365,27 +365,27 @@ export default function DocumentsPage() {
                                 {loadingInspect ? (
                                     <div className="flex-1 flex flex-col items-center justify-center grayscale opacity-50">
                                         <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4" />
-                                        <div className="text-[9px] font-black uppercase tracking-widest text-gray-600">Reconstructing Data Layer...</div>
+                                        <div className="text-tiny font-black uppercase tracking-widest text-gray-600">Reconstructing Data Layer...</div>
                                     </div>
                                 ) : activeTab === 'segments' ? (
                                     <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar lg:grid lg:grid-cols-2 gap-4 pb-10">
                                         {inspectedPoints.map(point => (
-                                            <div key={point.id} className="bg-[#0a0a0b]/50 border border-white/5 rounded-[2rem] p-6 text-xs font-mono mb-4 h-fit">
+                                            <div key={point.id} className="bg-[#0a0a0b]/50 border border-white/5 rounded-[2rem] p-6 text-tiny mb-4 h-fit">
                                                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/5">
                                                     <span className="text-indigo-500 font-bold tracking-tighter">Point ID: {String(point.id).slice(0, 16)}...</span>
-                                                    <span className="bg-indigo-500/10 px-2 py-0.5 rounded text-[8px] text-indigo-400 font-black uppercase tracking-widest">
+                                                    <span className="bg-indigo-500/10 px-2 py-0.5 rounded text-tiny text-indigo-400 font-black uppercase tracking-widest">
                                                         Dim: {point.vector_size}
                                                     </span>
                                                 </div>
                                                 <div className="space-y-4">
                                                     <div>
-                                                        <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-2 pr-2">Vector Preview</div>
-                                                        <div className="bg-[#121214] p-3 rounded-xl text-indigo-300/60 overflow-x-auto whitespace-nowrap text-[10px]">
+                                                        <div className="text-tiny font-black text-gray-600 uppercase tracking-widest mb-2 pr-2">Vector Preview</div>
+                                                        <div className="bg-[#121214] p-3 rounded-xl text-indigo-300/60 overflow-x-auto whitespace-nowrap text-tiny">
                                                             [{point.vector_preview.map((v: number) => v.toFixed(4)).join(', ')} ... ]
                                                         </div>
                                                     </div>
                                                     <div>
-                                                        <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-2 pr-2">Payload Content</div>
+                                                        <div className="text-tiny font-black text-gray-600 uppercase tracking-widest mb-2 pr-2">Payload Content</div>
                                                         <div className="bg-[#121214] p-4 rounded-xl text-gray-400 leading-relaxed max-h-32 overflow-y-auto custom-scrollbar whitespace-pre-wrap">
                                                             {point.payload.text || 'No text content'}
                                                         </div>
@@ -397,10 +397,10 @@ export default function DocumentsPage() {
                                 ) : (
                                     <div className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0b]/50 border border-white/5 rounded-[2rem] p-8">
                                         <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                                            <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Global Asset Buffer</div>
-                                            <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">UTF-8 Encoded</div>
+                                            <div className="text-tiny font-black text-gray-500 uppercase tracking-widest">Global Asset Buffer</div>
+                                            <div className="text-tiny font-bold text-indigo-400 uppercase tracking-widest">UTF-8 Encoded</div>
                                         </div>
-                                        <div className="flex-1 overflow-y-auto custom-scrollbar text-sm text-gray-400 leading-relaxed font-mono whitespace-pre-wrap pr-4 pb-10">
+                                        <div className="flex-1 overflow-y-auto custom-scrollbar text-caption text-gray-400 leading-relaxed whitespace-pre-wrap pr-4 pb-10">
                                             {documentContent || 'No source content available for this document.'}
                                         </div>
                                     </div>
@@ -426,10 +426,10 @@ export default function DocumentsPage() {
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
                             className="relative w-full max-w-md bg-[#121214] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl"
                         >
-                            <h2 className="text-2xl font-black mb-2 uppercase tracking-tight">
+                            <h2 className="text-h3 font-black mb-2 uppercase tracking-tight">
                                 {actionDoc.type === 'move' ? 'Move Document' : 'Share Document'}
                             </h2>
-                            <p className="text-gray-500 text-sm mb-8">
+                            <p className="text-gray-500 text-caption mb-8">
                                 {actionDoc.type === 'move'
                                     ? `Migrate "${actionDoc.doc.name}" to another project environment.`
                                     : `Enable access for "${actionDoc.doc.name}" in a different workspace context.`}
@@ -448,7 +448,7 @@ export default function DocumentsPage() {
                                                 <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
                                                     <Layout size={16} />
                                                 </div>
-                                                <span className="font-bold text-sm tracking-tight">{ws.name}</span>
+                                                <span className="font-bold text-caption tracking-tight">{ws.name}</span>
                                             </div>
                                             <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-gray-700 group-hover:bg-indigo-500 group-hover:text-white transition-all">
                                                 <Check size={12} />
@@ -457,7 +457,7 @@ export default function DocumentsPage() {
                                     ))
                                 }
                                 {workspaces.length <= 1 && (
-                                    <div className="text-center py-6 text-gray-600 text-sm">
+                                    <div className="text-center py-6 text-gray-600 text-caption">
                                         No other workspaces available.
                                     </div>
                                 )}
@@ -490,8 +490,8 @@ export default function DocumentsPage() {
                             <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mb-6">
                                 <AlertCircle size={32} />
                             </div>
-                            <h2 className="text-2xl font-black mb-2 uppercase tracking-tight">Delete Document?</h2>
-                            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                            <h2 className="text-h3 font-black mb-2 uppercase tracking-tight">Delete Document?</h2>
+                            <p className="text-gray-500 text-caption mb-8 leading-relaxed">
                                 You are removing <span className="text-white font-bold">{deletingDoc.name}</span> from the current workspace context.
                             </p>
 
@@ -507,8 +507,8 @@ export default function DocumentsPage() {
                                     <Trash2 size={12} />
                                 </div>
                                 <div className="text-left">
-                                    <div className="text-[10px] font-black uppercase text-gray-400 group-hover:text-white transition-colors">Apply Global Purge</div>
-                                    <div className="text-[9px] text-gray-600">Permanently erase from the central vault storage</div>
+                                    <div className="text-tiny font-black uppercase text-gray-400 group-hover:text-white transition-colors">Apply Global Purge</div>
+                                    <div className="text-tiny text-gray-600">Permanently erase from the central vault storage</div>
                                 </div>
                             </div>
 
@@ -555,15 +555,15 @@ export default function DocumentsPage() {
                                 <Database size={48} />
                             </div>
 
-                            <div className="inline-block px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-widest mb-6">
+                            <div className="inline-block px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-tiny font-black uppercase tracking-widest mb-6">
                                 Architecture Mismatch Detected
                             </div>
 
-                            <h2 className="text-3xl font-black mb-4 uppercase tracking-tighter leading-none">
+                            <h2 className="text-h2 font-black mb-4 uppercase tracking-tighter leading-none">
                                 Embedding Collision
                             </h2>
 
-                            <p className="text-gray-400 text-sm mb-10 leading-relaxed font-medium">
+                            <p className="text-gray-400 text-caption mb-10 leading-relaxed font-medium">
                                 The target workspace uses a different embedding model. To enable "{conflictData.name}" here, we must <span className="text-white font-bold">generate a new index</span> optimized for the target's architecture.
                             </p>
 
@@ -585,9 +585,9 @@ export default function DocumentsPage() {
                             </div>
 
                             <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-center gap-6 opacity-30">
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Qdrant v1.12</span>
+                                <span className="text-tiny font-bold uppercase tracking-widest">Qdrant v1.12</span>
                                 <div className="w-1 h-1 rounded-full bg-gray-600" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Vector isolation active</span>
+                                <span className="text-tiny font-bold uppercase tracking-widest">Vector isolation active</span>
                             </div>
                         </motion.div>
                     </div>

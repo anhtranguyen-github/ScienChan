@@ -212,7 +212,7 @@ function SearchContent() {
                         <Link href="/" className="text-gray-500 hover:text-white transition-all">
                             ← Back
                         </Link>
-                        <h1 className="text-xl font-bold">Search</h1>
+                        <h1 className="text-h3 font-bold">Search</h1>
                     </div>
 
                     {/* Search Input */}
@@ -223,7 +223,7 @@ function SearchContent() {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Search documents, chats, workspaces..."
-                            className="w-full pl-12 pr-12 py-4 rounded-xl bg-white/5 border border-white/10 text-lg focus:outline-none focus:ring-2 ring-blue-500/50"
+                            className="w-full pl-12 pr-12 py-4 rounded-xl bg-white/5 border border-white/10 text-h3 focus:outline-none focus:ring-2 ring-blue-500/50"
                             autoFocus
                         />
                         {query && (
@@ -248,7 +248,7 @@ function SearchContent() {
                                 key={s}
                                 onClick={() => setScope(s)}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-md text-sm capitalize transition-all",
+                                    "px-3 py-1.5 rounded-md text-caption capitalize transition-all",
                                     scope === s
                                         ? "bg-white/10 text-white"
                                         : "text-gray-500 hover:text-white"
@@ -263,7 +263,7 @@ function SearchContent() {
                     <select
                         value={workspaceFilter}
                         onChange={(e) => setWorkspaceFilter(e.target.value)}
-                        className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 focus:outline-none"
+                        className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-caption text-gray-300 focus:outline-none"
                     >
                         <option value="">All Workspaces</option>
                         {workspaces.map(ws => (
@@ -282,7 +282,7 @@ function SearchContent() {
                 ) : query ? (
                     results.length > 0 ? (
                         <div className="space-y-3">
-                            <p className="text-sm text-gray-500 mb-4">{results.length} results found</p>
+                            <p className="text-caption text-gray-500 mb-4">{results.length} results found</p>
                             {results.map((result) => {
                                 const Icon = getTypeIcon(result.type);
                                 return (
@@ -297,11 +297,11 @@ function SearchContent() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <h3 className="font-medium text-white truncate">{result.title}</h3>
-                                                <span className="text-xs text-gray-600 uppercase">{result.type}</span>
+                                                <span className="text-tiny text-gray-600 uppercase">{result.type}</span>
                                             </div>
-                                            <p className="text-sm text-gray-500 truncate">{result.snippet}</p>
+                                            <p className="text-caption text-gray-500 truncate">{result.snippet}</p>
                                             {result.workspace_id && result.type !== 'workspace' && (
-                                                <p className="text-xs text-gray-600 mt-1">Workspace: {result.workspace_id}</p>
+                                                <p className="text-tiny text-gray-600 mt-1">Workspace: {result.workspace_id}</p>
                                             )}
                                         </div>
                                         <ArrowRight size={16} className="text-gray-600 group-hover:text-blue-500 transition-all" />
@@ -313,14 +313,14 @@ function SearchContent() {
                         <div className="text-center py-12">
                             <Search className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                             <p className="text-gray-400">No results found for "{query}"</p>
-                            <p className="text-sm text-gray-600 mt-1">Try different keywords or adjust filters</p>
+                            <p className="text-caption text-gray-600 mt-1">Try different keywords or adjust filters</p>
                         </div>
                     )
                 ) : (
                     /* Recent Searches */
                     recentSearches.length > 0 && (
                         <div>
-                            <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+                            <h3 className="text-caption font-medium text-gray-400 mb-3 flex items-center gap-2">
                                 <Clock size={14} />
                                 Recent Searches
                             </h3>

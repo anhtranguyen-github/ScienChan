@@ -16,10 +16,10 @@ export default function ForgePage() {
                         <Hammer size={22} />
                     </div>
                     <div>
-                        <h2 className="text-lg font-black tracking-tight uppercase">Capability Forge</h2>
+                        <h2 className="text-h3 font-black tracking-tight uppercase">Capability Forge</h2>
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Active Hooks: System Native</span>
+                            <span className="text-tiny text-gray-500 font-bold uppercase tracking-widest">Active Hooks: System Native</span>
                         </div>
                     </div>
                 </div>
@@ -27,7 +27,7 @@ export default function ForgePage() {
                 <div className="flex gap-4">
                     <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/5">
                         <Zap size={14} className="text-green-500" />
-                        <span className="text-[10px] font-black text-gray-600 uppercase">MCP Protocol V1</span>
+                        <span className="text-tiny font-black text-gray-600 uppercase">MCP Protocol V1</span>
                     </div>
                 </div>
             </header>
@@ -47,16 +47,16 @@ export default function ForgePage() {
                                 <Cpu size={56} className="text-indigo-400" />
                             </div>
                             <div className="space-y-4 text-center md:text-left">
-                                <h3 className="text-3xl font-black uppercase tracking-tighter text-white">Neural Tooling Bus</h3>
-                                <p className="text-gray-500 text-lg leading-relaxed max-w-xl font-medium">
+                                <h3 className="text-h2 font-black uppercase tracking-tighter text-white">Neural Tooling Bus</h3>
+                                <p className="text-gray-500 text-h3 leading-relaxed max-w-xl font-medium">
                                     Configure the AI Architect's active capabilities. Connect Model Context Protocol (MCP) servers and external API hooks to expand functional reasoning.
                                 </p>
                                 <div className="flex flex-wrap gap-4 pt-2">
-                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase text-indigo-400 bg-indigo-500/10 px-4 py-2 rounded-xl border border-indigo-500/20">
+                                    <div className="flex items-center gap-2 text-tiny font-black uppercase text-indigo-400 bg-indigo-500/10 px-4 py-2 rounded-xl border border-indigo-500/20">
                                         <Activity size={12} />
                                         Streaming Logs: Active
                                     </div>
-                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase text-gray-600 bg-white/5 px-4 py-2 rounded-xl border border-white/5 leading-none">
+                                    <div className="flex items-center gap-2 text-tiny font-black uppercase text-gray-600 bg-white/5 px-4 py-2 rounded-xl border border-white/5 leading-none">
                                         LATENCY: 14ms
                                     </div>
                                 </div>
@@ -68,11 +68,11 @@ export default function ForgePage() {
                     <div className="bg-[#121214] border border-white/10 rounded-[2.5rem] shadow-2xl p-10 overflow-hidden min-h-[500px]">
                         <div className="mb-10 flex items-center justify-between pb-6 border-b border-white/5">
                             <div>
-                                <h3 className="text-2xl font-black uppercase tracking-tighter">Registry Control</h3>
-                                <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest mt-1">Manage core system functions and external plugins</p>
+                                <h3 className="text-h3 font-black uppercase tracking-tighter">Registry Control</h3>
+                                <p className="text-gray-600 text-tiny font-bold uppercase tracking-widest mt-1">Manage core system functions and external plugins</p>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="text-[10px] font-bold text-gray-700 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">PROXIED VIA BASTION</div>
+                                <div className="text-tiny font-bold text-gray-700 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">PROXIED VIA BASTION</div>
                             </div>
                         </div>
                         <ToolsManager />

@@ -76,7 +76,7 @@ export function DocumentGraph({ workspaceId }: { workspaceId: string }) {
             <div className="flex-1 flex items-center justify-center min-h-[400px]">
                 <div className="text-center">
                     <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-                    <p className="text-gray-500 text-sm">Mapping semantic landscape...</p>
+                    <p className="text-gray-500 text-caption">Mapping semantic landscape...</p>
                 </div>
             </div>
         );
@@ -87,7 +87,7 @@ export function DocumentGraph({ workspaceId }: { workspaceId: string }) {
             <div className="flex-1 flex flex-col items-center justify-center text-gray-500 min-h-[400px] border border-dashed border-white/10 rounded-xl bg-white/5">
                 <Info className="w-12 h-12 mb-4 text-gray-700" />
                 <p className="font-medium text-white">Not enough semantic data</p>
-                <p className="text-sm max-w-xs text-center mt-2">
+                <p className="text-caption max-w-xs text-center mt-2">
                     We need at least two indexed documents to visualize relationships.
                     Ensure your documents are fully indexed.
                 </p>
@@ -111,7 +111,7 @@ export function DocumentGraph({ workspaceId }: { workspaceId: string }) {
                     const node = n as GraphNode;
                     const label = node.name;
                     const fontSize = 12 / globalScale;
-                    ctx.font = `${fontSize}px Inter, sans-serif`;
+                    ctx.font = `${fontSize}px var(--font-outfit), sans-serif`;
 
                     // Draw node circle
                     const r = 5;
@@ -138,7 +138,7 @@ export function DocumentGraph({ workspaceId }: { workspaceId: string }) {
             />
 
             {/* Legend/HUD */}
-            <div className="absolute top-6 left-6 p-4 bg-black/40 backdrop-blur-xl rounded-xl border border-white/10 text-xs text-gray-400 pointer-events-none select-none shadow-2xl">
+            <div className="absolute top-6 left-6 p-4 bg-black/40 backdrop-blur-xl rounded-xl border border-white/10 text-tiny text-gray-400 pointer-events-none select-none shadow-2xl">
                 <div className="flex items-center gap-2 mb-4">
                     <div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]" />
                     <h4 className="font-bold text-white uppercase tracking-[0.2em]">Semantic Topology</h4>
@@ -160,14 +160,14 @@ export function DocumentGraph({ workspaceId }: { workspaceId: string }) {
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-white/5">
-                    <p className="text-[10px] leading-relaxed italic opacity-60">
+                    <p className="text-tiny leading-relaxed opacity-60">
                         Proximity indicates conceptual alignment based on vector embeddings.
                     </p>
                 </div>
             </div>
 
             {/* Controls hint */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/5 backdrop-blur-md rounded-full border border-white/10 text-[10px] text-gray-500 flex gap-4 pointer-events-none uppercase tracking-tighter">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/5 backdrop-blur-md rounded-full border border-white/10 text-tiny text-gray-500 flex gap-4 pointer-events-none uppercase tracking-tighter">
                 <span>Left Click: Pan</span>
                 <span className="w-px h-3 bg-white/10" />
                 <span>Scroll: Zoom</span>

@@ -43,8 +43,8 @@ export function CitationModal({ source, onClose }: CitationModalProps) {
                             <FileText size={20} className="text-blue-500" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-white">{source.name}</h3>
-                            <p className="text-xs text-gray-500">
+                            <h3 className="text-h3 font-bold text-white">{source.name}</h3>
+                            <p className="text-tiny text-gray-500">
                                 Citation [{source.id}] • {source.workspace_id ? `Workspace: ${source.workspace_id}` : 'Document Source'}
                             </p>
                         </div>
@@ -89,9 +89,9 @@ export function CitationModal({ source, onClose }: CitationModalProps) {
                     <div className="bg-[#1a1a1c] rounded-xl p-4 border border-white/5">
                         <div className="flex items-center gap-2 mb-3 pb-3 border-b border-white/5">
                             <FileText size={14} className="text-gray-500" />
-                            <span className="text-xs font-semibold text-gray-400 uppercase">Source Content</span>
+                            <span className="text-tiny font-semibold text-gray-400 uppercase">Source Content</span>
                         </div>
-                        <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-mono">
+                        <div className="text-caption text-gray-300 leading-relaxed whitespace-pre-wrap">
                             {source.content}
                         </div>
                     </div>
@@ -99,8 +99,8 @@ export function CitationModal({ source, onClose }: CitationModalProps) {
                     {/* Path Info */}
                     {source.minio_path && (
                         <div className="mt-4 p-3 bg-white/5 rounded-lg">
-                            <span className="text-xs text-gray-500">Storage Path: </span>
-                            <code className="text-xs text-gray-400">{source.minio_path}</code>
+                            <span className="text-tiny text-gray-500">Storage Path: </span>
+                            <code className="text-tiny text-gray-400">{source.minio_path}</code>
                         </div>
                     )}
                 </div>
@@ -109,7 +109,7 @@ export function CitationModal({ source, onClose }: CitationModalProps) {
                 <div className="p-4 border-t border-white/10 flex justify-end">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-gray-300 transition-all"
+                        className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-caption font-medium text-gray-300 transition-all"
                     >
                         Close
                     </button>
@@ -124,9 +124,9 @@ function MetaItem({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
         <div className="p-3 bg-white/5 rounded-lg">
             <div className="flex items-center gap-2 mb-1">
                 <Icon size={12} className="text-gray-500" />
-                <span className="text-[10px] text-gray-500 uppercase">{label}</span>
+                <span className="text-tiny text-gray-500 uppercase">{label}</span>
             </div>
-            <span className="text-sm text-white font-medium truncate block">{value}</span>
+            <span className="text-caption text-white font-medium truncate block">{value}</span>
         </div>
     );
 }
@@ -142,7 +142,7 @@ export function CitationBadge({ id, name, onClick }: CitationBadgeProps) {
     return (
         <button
             onClick={onClick}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-xs font-semibold hover:bg-blue-500/30 transition-all ml-1"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-tiny font-semibold hover:bg-blue-500/30 transition-all ml-1"
             title={name || `Citation ${id}`}
         >
             <FileText size={10} />

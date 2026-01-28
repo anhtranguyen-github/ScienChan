@@ -147,15 +147,15 @@ export default function KnowledgePage() {
                             <ArrowLeft size={20} className="text-gray-400 group-hover:text-white" />
                         </Link>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight mb-1">Knowledge Base</h1>
-                            <p className="text-gray-400 text-sm font-medium">Manage and index documents for RAG processing</p>
+                            <h1 className="text-h2 font-bold tracking-tight mb-1">Knowledge Base</h1>
+                            <p className="text-gray-400 text-caption font-medium">Manage and index documents for RAG processing</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                         <div className="px-4 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center gap-2">
                             <CheckCircle2 size={14} className="text-green-400" />
-                            <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider">Sync State: Active</span>
+                            <span className="text-tiny font-bold text-indigo-300 uppercase tracking-wider">Sync State: Active</span>
                         </div>
                     </div>
                 </header>
@@ -172,7 +172,7 @@ export default function KnowledgePage() {
                                     placeholder="Search repository..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-[#121214] border border-white/10 rounded-[1.2rem] py-4 pl-12 pr-6 text-sm outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
+                                    className="w-full bg-[#121214] border border-white/10 rounded-[1.2rem] py-4 pl-12 pr-6 text-caption outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
                                 />
                             </div>
                         </div>
@@ -195,8 +195,8 @@ export default function KnowledgePage() {
                                         <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
                                             <AlertCircle size={28} className="text-gray-600" />
                                         </div>
-                                        <h3 className="text-lg font-semibold mb-1">No documents found</h3>
-                                        <p className="text-gray-400 text-sm max-w-xs px-4">
+                                        <h3 className="text-h3 font-semibold mb-1">No documents found</h3>
+                                        <p className="text-gray-400 text-caption max-w-xs px-4">
                                             {searchQuery ? "Try a different search term or clear the filter." : "Upload documents to starts building your RAG corpus."}
                                         </p>
                                     </motion.div>
@@ -215,16 +215,16 @@ export default function KnowledgePage() {
                                                     {getFileIcon(doc.extension)}
                                                 </div>
                                                 <div className="flex flex-col min-w-0">
-                                                    <h4 className="text-sm font-bold text-gray-200 truncate group-hover:text-indigo-400 transition-colors">
+                                                    <h4 className="text-caption font-bold text-gray-200 truncate group-hover:text-indigo-400 transition-colors">
                                                         {doc.name}
                                                     </h4>
                                                     <div className="flex items-center gap-3 mt-1.5">
-                                                        <span className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-tighter">
+                                                        <span className="flex items-center gap-1.5 text-tiny font-bold text-gray-500 uppercase tracking-tighter">
                                                             <Database size={10} className="text-indigo-500/60" />
                                                             {doc.chunks} Fragments
                                                         </span>
                                                         <span className="w-1 h-1 rounded-full bg-white/10" />
-                                                        <span className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-tighter">
+                                                        <span className="flex items-center gap-1.5 text-tiny font-bold text-gray-500 uppercase tracking-tighter">
                                                             <Clock size={10} className="text-indigo-500/60" />
                                                             Synced
                                                         </span>
@@ -272,13 +272,13 @@ export default function KnowledgePage() {
                                 <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6">
                                     <Upload size={24} className="text-white" />
                                 </div>
-                                <h3 className="text-xl font-bold mb-2">Grow your knowledge</h3>
-                                <p className="text-white/70 text-sm mb-8 leading-relaxed">
+                                <h3 className="text-h3 font-bold mb-2">Grow your knowledge</h3>
+                                <p className="text-white/70 text-caption mb-8 leading-relaxed">
                                     Support for PDF, TXT, MD, and DOCX files. Automatic chunking and vector indexing.
                                 </p>
 
                                 <label className={cn(
-                                    "relative cursor-pointer flex items-center justify-center gap-2 py-4 px-6 bg-white text-indigo-700 rounded-2xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-95 shadow-xl disabled:opacity-50 disabled:scale-100",
+                                    "relative cursor-pointer flex items-center justify-center gap-2 py-4 px-6 bg-white text-indigo-700 rounded-2xl font-bold text-caption transition-all hover:scale-[1.02] active:scale-95 shadow-xl disabled:opacity-50 disabled:scale-100",
                                     isUploading ? "pointer-events-none" : ""
                                 )}>
                                     {isUploading ? (
@@ -299,13 +299,13 @@ export default function KnowledgePage() {
 
                         {/* Storage Stats */}
                         <div className="p-8 rounded-[2rem] bg-[#121214] border border-white/5 space-y-6 shadow-xl">
-                            <h4 className="text-sm font-bold uppercase tracking-widest text-indigo-400">Database Status</h4>
+                            <h4 className="text-caption font-bold uppercase tracking-widest text-indigo-400">Database Status</h4>
 
                             <div className="space-y-4">
                                 <div className="flex justify-between items-end">
                                     <div className="space-y-1">
-                                        <p className="text-xs text-gray-500 font-bold uppercase tracking-tighter">Total Documents</p>
-                                        <p className="text-2xl font-bold">{documents.length}</p>
+                                        <p className="text-tiny text-gray-500 font-bold uppercase tracking-tighter">Total Documents</p>
+                                        <p className="text-h3 font-bold">{documents.length}</p>
                                     </div>
                                     <div className="w-12 h-1 bg-indigo-500/20 rounded-full overflow-hidden">
                                         <div className="h-full bg-indigo-500" style={{ width: `${Math.min(documents.length * 10, 100)}%` }} />
@@ -314,8 +314,8 @@ export default function KnowledgePage() {
 
                                 <div className="flex justify-between items-end">
                                     <div className="space-y-1">
-                                        <p className="text-xs text-gray-500 font-bold uppercase tracking-tighter">Vector Clusters</p>
-                                        <p className="text-2xl font-bold">{documents.reduce((acc, d) => acc + d.chunks, 0)}</p>
+                                        <p className="text-tiny text-gray-500 font-bold uppercase tracking-tighter">Vector Clusters</p>
+                                        <p className="text-h3 font-bold">{documents.reduce((acc, d) => acc + d.chunks, 0)}</p>
                                     </div>
                                     <div className="w-12 h-1 bg-blue-500/20 rounded-full overflow-hidden">
                                         <div className="h-full bg-blue-500" style={{ width: '65%' }} />
@@ -326,7 +326,7 @@ export default function KnowledgePage() {
                             <div className="pt-6 border-t border-white/5">
                                 <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-start gap-3">
                                     <AlertCircle size={14} className="text-indigo-500 mt-1 shrink-0" />
-                                    <p className="text-[10px] leading-relaxed text-gray-400 uppercase tracking-tight font-medium">
+                                    <p className="text-tiny leading-relaxed text-gray-400 uppercase tracking-tight font-medium">
                                         Auto-embedding is active. All uploaded content is processed through the <span className="text-gray-300">text-embedding-3-small</span> model.
                                     </p>
                                 </div>

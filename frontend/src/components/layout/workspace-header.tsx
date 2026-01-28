@@ -44,16 +44,16 @@ export function WorkspaceHeader({ onWorkspaceClick }: WorkspaceHeaderProps) {
                     title="Switch Workspace"
                 >
                     <div className={cn(
-                        "w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold",
+                        "w-6 h-6 rounded-md flex items-center justify-center text-tiny font-bold",
                         isDefault ? "bg-gray-600 text-white" : "bg-blue-600 text-white"
                     )}>
                         {currentWorkspace?.name?.[0]?.toUpperCase() || 'W'}
                     </div>
                     <div className="flex flex-col items-start">
-                        <span className="text-sm font-semibold text-white">
+                        <span className="text-caption font-semibold text-white">
                             {currentWorkspace?.name || 'Loading...'}
                         </span>
-                        <span className="text-[10px] text-gray-500 uppercase">
+                        <span className="text-tiny text-gray-500 uppercase">
                             {isDefault ? 'Default' : `ID: ${workspaceId}`}
                         </span>
                     </div>
@@ -61,7 +61,7 @@ export function WorkspaceHeader({ onWorkspaceClick }: WorkspaceHeaderProps) {
                 </button>
 
                 {/* Workspace Meta */}
-                <div className="hidden md:flex items-center gap-3 text-xs text-gray-500">
+                <div className="hidden md:flex items-center gap-3 text-tiny text-gray-500">
                     <div className="flex items-center gap-1 px-2 py-1 rounded bg-white/5">
                         <Database size={12} />
                         <span>{documentCount} docs</span>
@@ -80,7 +80,7 @@ export function WorkspaceHeader({ onWorkspaceClick }: WorkspaceHeaderProps) {
                         key={item.href}
                         href={item.href}
                         className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                            "flex items-center gap-2 px-4 py-2 rounded-lg text-caption font-medium transition-all",
                             isActive(item.href)
                                 ? "bg-white text-black"
                                 : "text-gray-400 hover:text-white hover:bg-white/5"
@@ -96,7 +96,7 @@ export function WorkspaceHeader({ onWorkspaceClick }: WorkspaceHeaderProps) {
             <div className="flex items-center gap-2">
                 <Link
                     href="/"
-                    className="text-xs text-gray-500 hover:text-white px-3 py-1.5 rounded hover:bg-white/5 transition-all"
+                    className="text-tiny text-gray-500 hover:text-white px-3 py-1.5 rounded hover:bg-white/5 transition-all"
                 >
                     Exit Workspace
                 </Link>
