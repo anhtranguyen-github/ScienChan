@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `QdrantProvider` for vector search operations.
   - `RAGService` for text chunking and embedding generation.
   - `IngestionPipeline` for document processing.
+  - **Advanced RAG**: Hybrid Search implementation using Reciprocal Rank Fusion (RRF).
+  - **Flexible Providers**: Factored out LLM and Embedding providers to allow OpenAI, Anthropic, Voyage, and Local models via `llm_provider.py` and `embedding_provider.py`.
 
 - Phase 3: LangGraph Orchestration.
   - `AgentState` refinement with messages and context.

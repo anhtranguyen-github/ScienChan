@@ -11,6 +11,8 @@
 - [x] Implement document ingestion pipeline.
 - [x] Create semantic chunking logic.
 - [x] Implement embedding service.
+- [x] Refine Search Strategies (Hybrid Search & RRF).
+- [x] Flexible AI/Embedding Providers (OpenAI, Anthropic, Local).
 
 ## Phase 3: LangGraph Orchestration [100%]
 - [x] Define reasoning graph nodes.

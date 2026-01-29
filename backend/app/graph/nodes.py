@@ -1,22 +1,28 @@
 from typing import Dict, List
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from backend.app.graph.state import AgentState
 from backend.app.rag.qdrant_provider import qdrant
 from backend.app.rag.rag_service import rag_service
 from backend.app.tools.registry import get_tools
+from backend.app.core.llm_provider import get_llm
 
-# Initialize LLM
-llm = ChatOpenAI(model="gpt-4o", streaming=True)
+# Initialize LLM via provider factory
+llm = get_llm()
 llm_with_tools = llm.bind_tools(get_tools())
 
 async def retrieval_node(state: AgentState) -> Dict:
-    """Retrieve relevant context from Qdrant."""
+    """Retrieve relevant context using Hybrid Search (Vector + Keyword)."""
     last_message = state["messages"][-1].content
     query_vector = await rag_service.get_query_embedding(last_message)
     
-    results = await qdrant.search("knowledge_base", query_vector, limit=3)
-    context = [res.payload["text"] for res in results]
+    # Use Hybrid Search for better recall
+    results = await qdrant.hybrid_search(
+        collection_name="knowledge_base", 
+        query_vector=query_vector, 
+        query_text=last_message,
+        limit=5
+    )
+    context = [res["payload"]["text"] for res in results]
     
     return {
         "context": context,
