@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class AISettings(BaseSettings):
@@ -20,8 +20,9 @@ class AISettings(BaseSettings):
     QDRANT_PORT: int = 6333
     HYBRID_SEARCH_ALPHA: float = 0.5  # Balance between vector and keyword
     
-    class Config:
-        env_file = ".env"
-        extra = "allow"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="allow"
+    )
 
 ai_settings = AISettings()
