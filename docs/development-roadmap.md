@@ -13,6 +13,8 @@
 - [x] Implement embedding service.
 - [x] Refine Search Strategies (Hybrid Search & RRF).
 - [x] Flexible AI/Embedding Providers (OpenAI, Anthropic, Local).
+- [x] PDF Document Ingestion Support.
+- [x] Backend Validation with Test PDF (100% Correctness).
 
 ## Phase 3: LangGraph Orchestration [100%]
 - [x] Define reasoning graph nodes.

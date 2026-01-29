@@ -29,7 +29,9 @@ async def retrieval_node(state: AgentState) -> Dict:
         "reasoning_steps": state.get("reasoning_steps", []) + ["Retrieved context from knowledge base"]
     }
 
-async def reason_node(state: AgentState) -> Dict:
+from langchain_core.runnables import RunnableConfig
+
+async def reason_node(state: AgentState, config: RunnableConfig) -> Dict:
     """Analyze context and decide next steps."""
     system_prompt = SystemMessage(content=(
         "You are an advanced reasoning assistant. Use the provided context to answer the user's question. "
@@ -41,7 +43,7 @@ async def reason_node(state: AgentState) -> Dict:
     ))
     
     messages = [system_prompt] + state["messages"]
-    response = await llm_with_tools.ainvoke(messages)
+    response = await llm_with_tools.ainvoke(messages, config=config)
     
     return {
         "messages": [response],

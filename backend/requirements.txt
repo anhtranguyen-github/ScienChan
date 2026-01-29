@@ -3,12 +3,16 @@ uvicorn
 langgraph
 langchain
 langchain-openai
+langchain-anthropic
+langchain-voyageai
 langchain-community
 qdrant-client
 python-dotenv
 pydantic
 pydantic-settings
 httpx
-# For reasoning optimization if needed
+pypdf
 transformers
 torch
+sentence-transformers
+voyageai
