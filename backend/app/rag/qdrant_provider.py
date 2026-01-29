@@ -46,7 +46,15 @@ class QdrantProvider:
             wait=True
         )
 
-    async def hybrid_search(self, collection_name: str, query_vector: List[float], query_text: str, limit: int = 5):
+    async def hybrid_search(
+        self, 
+        collection_name: str, 
+        query_vector: List[float], 
+        query_text: str, 
+        limit: int = 5,
+        mode: str = "hybrid",
+        alpha: float = 0.5
+    ):
         """
         Perform hybrid search utilizing Qdrant's Query API.
         Combines dense vector search with full-text matching if supported by the model,
@@ -81,6 +89,11 @@ class QdrantProvider:
         )
         text_results = text_results_response[0]
         
+        if mode == "vector":
+            return [{"id": hit.id, "payload": hit.payload, "score": hit.score} for hit in vector_results[:limit]]
+        elif mode == "keyword":
+            return [{"id": hit.id, "payload": hit.payload, "score": 1.0} for hit in text_results[:limit]]
+            
         # 3. Combine using Reciprocal Rank Fusion (RRF)
         return self._fuse_results(vector_results, text_results, limit)
 
