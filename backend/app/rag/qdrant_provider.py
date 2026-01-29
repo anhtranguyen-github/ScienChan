@@ -1,20 +1,35 @@
 import os
+from typing import List, Dict, Optional
 from qdrant_client import QdrantClient
-from qdrant_client.http import models
+from qdrant_client.http import models as qmodels
+from backend.app.core.config import ai_settings
 
 class QdrantProvider:
-    def __init__(self, host: str = "localhost", port: int = 6333):
-        self.client = QdrantClient(host=host, port=port)
+    def __init__(self):
+        self.client = QdrantClient(
+            host=ai_settings.QDRANT_HOST,
+            port=ai_settings.QDRANT_PORT
+        )
 
     async def create_collection(self, collection_name: str, vector_size: int = 1536):
-        """Create a new collection if it doesn't exist."""
+        """Create a new collection with optimized HNSW and keyword indexing."""
         if not self.client.collection_exists(collection_name):
             self.client.create_collection(
                 collection_name=collection_name,
-                vectors_config=models.VectorParams(
+                vectors_config=qmodels.VectorParams(
                     size=vector_size,
-                    distance=models.Distance.COSINE
-                )
+                    distance=qmodels.Distance.COSINE,
+                    on_disk=True # Optimize for memory
+                ),
+                optimizers_config=qmodels.OptimizersConfigDiff(
+                    indexing_threshold=10000,
+                ),
+            )
+            # Add payload indexing for common fields to speed up filtering/keyword search
+            self.client.create_payload_index(
+                collection_name=collection_name,
+                field_name="text",
+                field_schema="text",
             )
             return True
         return False
@@ -23,23 +38,69 @@ class QdrantProvider:
         """Upsert vectors into the collection."""
         self.client.upsert(
             collection_name=collection_name,
-            points=models.Batch(
+            points=qmodels.Batch(
                 ids=ids,
                 vectors=vectors,
                 payloads=payloads
             )
         )
 
-    async def search(self, collection_name: str, query_vector, limit: int = 5):
-        """Perform semantic search."""
-        return self.client.search(
+    async def hybrid_search(self, collection_name: str, query_vector: List[float], query_text: str, limit: int = 5):
+        """
+        Perform hybrid search utilizing Qdrant's Query API.
+        Combines dense vector search with full-text matching if supported by the model,
+        or uses RRF style fusion logic.
+        """
+        # Qdrant 1.10+ supports advanced Query API
+        # For simplicity in this template, we'll use a weighted search approach
+        
+        # 1. Vector Search
+        vector_results = self.client.search(
             collection_name=collection_name,
             query_vector=query_vector,
-            limit=limit
+            limit=limit * 2,
+            with_payload=True
         )
+        
+        # 2. Text/Keyword Search (using payload filter as a proxy for simpler setups)
+        # In a real production setup, we'd use a separate BM25 index or Qdrant's full-text features
+        text_results = self.client.scroll(
+            collection_name=collection_name,
+            scroll_filter=qmodels.Filter(
+                must=[
+                    qmodels.FieldCondition(
+                        key="text",
+                        match=qmodels.MatchText(text=query_text)
+                    )
+                ]
+            ),
+            limit=limit * 2,
+            with_payload=True
+        )[0]
+        
+        # 3. Combine using Reciprocal Rank Fusion (RRF)
+        return self._fuse_results(vector_results, text_results, limit)
+
+    def _fuse_results(self, vector_hits, text_hits, limit, k=60):
+        """Reciprocal Rank Fusion."""
+        scores = {}
+        payload_map = {}
+        
+        for rank, hit in enumerate(vector_hits):
+            scores[hit.id] = scores.get(hit.id, 0) + 1.0 / (k + rank + 1)
+            payload_map[hit.id] = hit.payload
+            
+        for rank, hit in enumerate(text_hits):
+            scores[hit.id] = scores.get(hit.id, 0) + 1.0 / (k + rank + 1)
+            if hit.id not in payload_map:
+                payload_map[hit.id] = hit.payload
+                
+        sorted_ids = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
+        
+        return [
+            {"id": doc_id, "payload": payload_map[doc_id], "score": scores[doc_id]}
+            for doc_id in sorted_ids[:limit]
+        ]
 
 # Global instance
-qdrant = QdrantProvider(
-    host=os.getenv("QDRANT_HOST", "localhost"),
-    port=int(os.getenv("QDRANT_PORT", 6333))
-)
+qdrant = QdrantProvider()
