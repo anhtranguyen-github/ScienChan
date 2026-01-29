@@ -1,7 +1,9 @@
 import os
 import json
+import shutil
+import tempfile
 from typing import AsyncGenerator
-from fastapi import FastAPI, Request, UploadFile, File
+from fastapi import FastAPI, Request, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -28,14 +30,36 @@ async def root():
 
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
-    """Upload and process a document into the knowledge base."""
-    content = await file.read()
-    text = content.decode("utf-8") # Simplified, should handle PDF/etc.
-    
-    await ingestion_pipeline.initialize()
-    num_chunks = await ingestion_pipeline.process_text(text, metadata={"filename": file.filename})
-    
-    return {"status": "success", "filename": file.filename, "chunks": num_chunks}
+    """
+    Upload and process a document into the knowledge base.
+    Supports PDF, TXT, MD, and DOCX.
+    """
+    try:
+        # Create a temporary file to store the upload
+        suffix = os.path.splitext(file.filename)[1]
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            shutil.copyfileobj(file.file, tmp)
+            tmp_path = tmp.name
+
+        await ingestion_pipeline.initialize()
+        
+        # Process using the optimized unified pipeline
+        num_chunks = await ingestion_pipeline.process_file(
+            tmp_path, 
+            metadata={"filename": file.filename}
+        )
+        
+        # Cleanup
+        os.remove(tmp_path)
+        
+        return {
+            "status": "success", 
+            "filename": file.filename, 
+            "chunks": num_chunks,
+            "message": f"Successfully processed {num_chunks} chunks."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 async def stream_graph_updates(message: str) -> AsyncGenerator[str, None]:
     """Stream events from the LangGraph execution."""

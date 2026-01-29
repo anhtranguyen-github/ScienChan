@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `IngestionPipeline` for document processing.
   - **Advanced RAG**: Hybrid Search implementation using Reciprocal Rank Fusion (RRF).
   - **Flexible Providers**: Factored out LLM and Embedding providers to allow OpenAI, Anthropic, Voyage, and Local models via `llm_provider.py` and `embedding_provider.py`.
-  - **PDF Support**: Added `PyPDFLoader` integration for automated document ingestion.
+  - **Multi-format Support**: Integrated `PyPDFLoader`, `Docx2txtLoader`, and `TextLoader` to handle PDF, Microsoft Word, Markdown, and TXT files.
   - **Validation**: Successfully tested end-to-end RAG and reasoning flow using research paper `2505.03574v1.pdf`.
 
 - Phase 3: LangGraph Orchestration.
