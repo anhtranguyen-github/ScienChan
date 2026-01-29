@@ -57,6 +57,7 @@ export function useChat() {
                     if (msg.event === 'FatalError') throw new Error(msg.data);
 
                     const data = JSON.parse(msg.data);
+                    console.log("[SSE Event]", data.type, data);
 
                     if (data.type === 'content') {
                         accumulatedContent += data.delta;

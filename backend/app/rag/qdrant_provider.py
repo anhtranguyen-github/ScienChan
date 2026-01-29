@@ -42,7 +42,8 @@ class QdrantProvider:
                 ids=ids,
                 vectors=vectors,
                 payloads=payloads
-            )
+            ),
+            wait=True
         )
 
     async def hybrid_search(self, collection_name: str, query_vector: List[float], query_text: str, limit: int = 5):
@@ -109,7 +110,7 @@ class QdrantProvider:
         # Use scroll to get unique sources from the payload
         response = await self.client.scroll(
             collection_name=collection_name,
-            limit=100,
+            limit=10000,
             with_payload=True,
             with_vectors=False
         )
