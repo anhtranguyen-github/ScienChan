@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { KnowledgeBase } from '@/components/knowledge-base';
 
 export default function ChatPage() {
-  const { messages, isLoading, sendMessage } = useChat();
+  const { messages, isLoading, sendMessage, clearChat } = useChat();
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +36,10 @@ export default function ChatPage() {
           <span className="text-lg font-bold tracking-tight">AI Architect</span>
         </div>
 
-        <button className="flex items-center gap-3 w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group shrink-0">
+        <button
+          onClick={clearChat}
+          className="flex items-center gap-3 w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group shrink-0"
+        >
           <Trash2 size={18} className="text-gray-400 group-hover:text-white" />
           <span className="text-sm font-medium">Clear Conversations</span>
         </button>
@@ -117,11 +120,11 @@ export default function ChatPage() {
                           {tool}
                         </span>
                       ))}
-                      {message.reasoning_steps?.length > 0 && (
+                      {(message.reasoning_steps?.length || 0) > 0 && (
                         <div className="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/5 text-[12px] text-gray-400 font-medium">
                           <span className="text-indigo-400 font-bold block mb-1 uppercase tracking-tighter">Thinking Process:</span>
                           <ul className="space-y-1">
-                            {message.reasoning_steps.map((step, idx) => (
+                            {message.reasoning_steps?.map((step, idx) => (
                               <li key={idx} className="flex gap-2">
                                 <span className="text-indigo-500 opacity-50">•</span>
                                 {step}
