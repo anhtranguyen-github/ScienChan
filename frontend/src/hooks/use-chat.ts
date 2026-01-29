@@ -7,6 +7,7 @@ export interface Message {
     content: string;
     reasoning_steps?: string[];
     tools?: string[];
+    sources?: Array<{ id: number, name: string, content: string }>;
 }
 
 export function useChat() {
@@ -72,6 +73,7 @@ export function useChat() {
                                     content: accumulatedContent,
                                     reasoning_steps: lastMsg?.reasoning_steps,
                                     tools: lastMsg?.tools,
+                                    sources: lastMsg?.sources,
                                 },
                             ];
                         });
@@ -87,10 +89,12 @@ export function useChat() {
                                     content: lastMsg?.content || '',
                                     reasoning_steps: data.steps,
                                     tools: lastMsg?.tools,
+                                    sources: lastMsg?.sources,
                                 },
                             ];
                         });
-                    } else if (data.type === 'tool_start') {
+                    }
+                    else if (data.type === 'tool_start') {
                         setMessages((prev) => {
                             const otherMessages = prev.filter((m) => m.id !== assistantMessageId);
                             const lastMsg = prev.find((m) => m.id === assistantMessageId);
@@ -102,6 +106,23 @@ export function useChat() {
                                     content: lastMsg?.content || '',
                                     reasoning_steps: lastMsg?.reasoning_steps,
                                     tools: [...(lastMsg?.tools || []), `Running ${data.tool}...`],
+                                    sources: lastMsg?.sources,
+                                },
+                            ];
+                        });
+                    } else if (data.type === 'sources') {
+                        setMessages((prev) => {
+                            const otherMessages = prev.filter((m) => m.id !== assistantMessageId);
+                            const lastMsg = prev.find((m) => m.id === assistantMessageId);
+                            return [
+                                ...otherMessages,
+                                {
+                                    id: assistantMessageId,
+                                    role: 'assistant',
+                                    content: lastMsg?.content || '',
+                                    reasoning_steps: lastMsg?.reasoning_steps,
+                                    tools: lastMsg?.tools,
+                                    sources: data.sources,
                                 },
                             ];
                         });

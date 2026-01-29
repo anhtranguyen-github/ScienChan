@@ -27,11 +27,24 @@ async def retrieval_node(state: AgentState) -> Dict:
         query_text=last_message,
         limit=5
     )
-    context = [res["payload"]["text"] for res in results]
+    
+    context = []
+    sources = []
+    for i, res in enumerate(results):
+        text = res["payload"]["text"]
+        source_name = res["payload"].get("source", "Unknown")
+        context.append(text)
+        sources.append({
+            "id": i + 1,
+            "name": source_name,
+            "content": text
+        })
+        
     logger.info(f"Retrieved {len(context)} context chunks")
     
     return {
         "context": context,
+        "sources": sources,
         "reasoning_steps": state.get("reasoning_steps", []) + ["Retrieved context from knowledge base"]
     }
 
@@ -39,18 +52,29 @@ from langchain_core.runnables import RunnableConfig
 
 async def reason_node(state: AgentState, config: RunnableConfig) -> Dict:
     """Analyze context and decide next steps."""
+    context_str = ""
+    for s in state.get("sources", []):
+        context_str += f"[{s['id']}] Source: {s['name']}\nContent: {s['content']}\n\n"
+    
+    logger.info(f"Context string for reasoning: {context_str[:200]}...")
+
     system_prompt = SystemMessage(content=(
         "You are an advanced reasoning assistant. Use the provided context to answer the user's question. "
         "If you need more information, you can use the available tools. "
+        "\n\n--- CITATION RULES ---\n"
+        "You MUST cite your sources using numeric brackets like [1], [2], etc., corresponding to the context blocks. "
+        "Place citations at the end of the sentences they support. "
+        "If multiple sources support a point, use [1][2]. "
         "\n\n--- REASONING OPTIMIZATION (NOWAIT) ---\n"
-        "Be direct and efficient in your reasoning. Avoid unnecessary self-reflection tokens like 'Wait', 'Hmm', 'Alternatively', "
-        "or 'Let me double check'. Only perform verification when absolutely necessary for accuracy. "
-        "\n\nContext: " + "\n---\n".join(state.get("context", []))
+        "Be direct and efficient in your reasoning. Avoid unnecessary self-reflection tokens. "
+        "\n\n--- CONTEXT ---\n" + context_str
     ))
     
     logger.info("Starting reasoning step...")
     messages = [system_prompt] + state["messages"]
     response = await llm_with_tools.ainvoke(messages, config=config)
+    
+    logger.info(f"LLM Response: {response.content[:200]}...")
     
     if response.tool_calls:
         logger.info(f"Model decided to call tools: {len(response.tool_calls)} calls generated")
