@@ -3,13 +3,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from '@/hooks/use-chat';
 import { cn } from '@/lib/utils';
-import { Send, Bot, User, Trash2, Cpu, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Trash2, Cpu, Loader2, Wrench } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { KnowledgeBase } from '@/components/knowledge-base';
+import { ToolsManager } from '@/components/tools-manager';
 
 export default function ChatPage() {
   const { messages, isLoading, sendMessage, clearChat } = useChat();
   const [input, setInput] = useState('');
+  const [showTools, setShowTools] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,6 +44,14 @@ export default function ChatPage() {
         >
           <Trash2 size={18} className="text-gray-400 group-hover:text-white" />
           <span className="text-sm font-medium">Clear Conversations</span>
+        </button>
+
+        <button
+          onClick={() => setShowTools(true)}
+          className="flex items-center gap-3 w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group shrink-0"
+        >
+          <Wrench size={18} className="text-gray-400 group-hover:text-white" />
+          <span className="text-sm font-medium">Manage Tools</span>
         </button>
 
         <div className="flex-1 overflow-hidden min-h-0">
@@ -182,6 +192,7 @@ export default function ChatPage() {
               />
               <button
                 type="submit"
+                aria-label="Send message"
                 disabled={isLoading || !input.trim()}
                 className="w-12 h-12 rounded-2xl bg-white text-[#0a0a0b] flex items-center justify-center hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all shadow-xl"
               >
@@ -194,6 +205,9 @@ export default function ChatPage() {
           </div>
         </div>
       </main>
+      <AnimatePresence>
+        {showTools && <ToolsManager onClose={() => setShowTools(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

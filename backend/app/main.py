@@ -2,6 +2,7 @@ import os
 import json
 import shutil
 import tempfile
+import logging
 from typing import AsyncGenerator
 from fastapi import FastAPI, Request, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
@@ -11,6 +12,12 @@ from langchain_core.messages import HumanMessage
 
 from backend.app.graph.builder import app as graph_app
 from backend.app.rag.ingestion import ingestion_pipeline
+from backend.app.rag.qdrant_provider import qdrant
+from backend.app.routers.tools import router as tools_router
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -28,6 +35,8 @@ app.add_middleware(
 async def root():
     return {"message": "LangGraph Chatbot API is running"}
 
+app.include_router(tools_router)
+
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
     """
@@ -44,10 +53,12 @@ async def upload_document(file: UploadFile = File(...)):
         await ingestion_pipeline.initialize()
         
         # Process using the optimized unified pipeline
+        logger.info(f"Starting processing for file: {file.filename}")
         num_chunks = await ingestion_pipeline.process_file(
             tmp_path, 
             metadata={"filename": file.filename}
         )
+        logger.info(f"Successfully processed {num_chunks} chunks for file: {file.filename}")
         
         # Cleanup
         os.remove(tmp_path)
@@ -106,6 +117,7 @@ async def chat_stream(request: Request):
     data = await request.json()
     message = data.get("message")
     thread_id = data.get("thread_id", "default")
+    logger.info(f"Received chat request for thread {thread_id}: {message[:50]}...")
     
     return StreamingResponse(
         stream_graph_updates(message, thread_id),
