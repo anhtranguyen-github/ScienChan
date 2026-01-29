@@ -37,6 +37,12 @@ graph TD
     - Response synthesis.
 4. The response is streamed back to the user via SSE.
 
+### 4. Document Management Flow
+1. User uploads a file (PDF, DOCX, etc.) via the frontend Knowledge Base.
+2. Backend stages the file and triggers the Ingestion Pipeline.
+3. Ingestion Pipeline chunks, embeds, and stores data in Qdrant with hybrid indexing.
+4. User can list and delete documents directly from the UI.
+
 ## Security
 - API Key management via environment variables.
 - CORS policy to restrict access to trusted origins.

@@ -33,14 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Conditional routing for tool execution.
   - Tool registry with `calculator` and `tavily_search`.
 
-- Phase 4: Streaming API.
-  - `POST /chat/stream` SSE endpoint for real-time model updates.
-  - `POST /upload` endpoint for knowledge base ingestion.
-  - `astream_events` integration for granular state tracking.
+- Phase 4: Streaming API & Advanced RAG.
+  - `POST /chat/stream` SSE endpoint with reasoning metadata.
+  - `POST /upload`, `GET /documents`, and `DELETE /documents/{name}` endpoints.
+  - NOWAIT reasoning optimization integration.
 
-- Phase 5: Premium Frontend & Polish.
-  - Glassmorphic Sidebar and Chat Bubble design.
-  - Framer Motion animations for message entry.
-  - `useChat` hook with SSE support via `@microsoft/fetch-event-source`.
-  - NOWAIT reasoning optimization via system prompt instructions.
-  - Responsive design with Tailwind CSS.
+- Phase 5: Premium Frontend & Full Integration.
+  - **Knowledge Base UI**: Sidebar component for multi-format upload/management.
+  - **Thinking Blocks**: Real-time visibility into reasoning and tool steps.
+  - **Glassmorphic UI**: Polished sidebar and chat bubbles with Framer Motion.
+  - `useChat` hook with enhanced metadata parsing.

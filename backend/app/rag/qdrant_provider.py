@@ -104,5 +104,43 @@ class QdrantProvider:
             for doc_id in sorted_ids[:limit]
         ]
 
+    async def list_documents(self, collection_name: str):
+        """List distinct documents in the collection using the 'source' field."""
+        # Use scroll to get unique sources from the payload
+        response = await self.client.scroll(
+            collection_name=collection_name,
+            limit=100,
+            with_payload=True,
+            with_vectors=False
+        )
+        
+        docs = {}
+        for point in response[0]:
+            source = point.payload.get("source")
+            if source and source not in docs:
+                docs[source] = {
+                    "name": source,
+                    "extension": point.payload.get("extension", "unknown"),
+                    "chunks": 0
+                }
+            if source:
+                docs[source]["chunks"] += 1
+                
+        return list(docs.values())
+
+    async def delete_document(self, collection_name: str, source_name: str):
+        """Delete all points associated with a specific source."""
+        return await self.client.delete(
+            collection_name=collection_name,
+            points_selector=qmodels.Filter(
+                must=[
+                    qmodels.FieldCondition(
+                        key="source",
+                        match=qmodels.MatchValue(value=source_name)
+                    )
+                ]
+            )
+        )
+
 # Global instance
 qdrant = QdrantProvider()

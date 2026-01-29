@@ -61,12 +61,32 @@ async def upload_document(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/documents")
+async def list_documents():
+    """List all documents currently in the knowledge base."""
+    await ingestion_pipeline.initialize()
+    docs = await qdrant.list_documents("knowledge_base")
+    return docs
+
+@app.delete("/documents/{name}")
+async def delete_document(name: str):
+    """Delete a document from the knowledge base."""
+    await qdrant.delete_document("knowledge_base", name)
+    return {"status": "success", "message": f"Document {name} deleted."}
+
 async def stream_graph_updates(message: str) -> AsyncGenerator[str, None]:
     """Stream events from the LangGraph execution."""
     inputs = {"messages": [HumanMessage(content=message)]}
     
     async for event in graph_app.astream_events(inputs, version="v2"):
         kind = event["event"]
+        name = event.get("name", "")
+        
+        # Capture reasoning steps when nodes finish
+        if kind == "on_chain_end" and name in ["retrieve", "reason", "generate"]:
+            output = event["data"].get("output", {})
+            if isinstance(output, dict) and "reasoning_steps" in output:
+                yield f"data: {json.dumps({'type': 'reasoning', 'steps': output['reasoning_steps']})}\n\n"
         
         if kind == "on_chat_model_stream":
             content = event["data"]["chunk"].content
