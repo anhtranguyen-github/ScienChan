@@ -156,5 +156,35 @@ class QdrantProvider:
             )
         )
 
+    async def get_document_content(self, collection_name: str, source_name: str):
+        """Retrieve and reconstruct the content of a document from its chunks."""
+        response = await self.client.scroll(
+            collection_name=collection_name,
+            scroll_filter=qmodels.Filter(
+                must=[
+                    qmodels.FieldCondition(
+                        key="source",
+                        match=qmodels.MatchValue(value=source_name)
+                    )
+                ]
+            ),
+            limit=1000,
+            with_payload=True
+        )
+        points = response[0]
+        if not points:
+            return None
+        
+        # If chunks have an 'index', sort by it. Otherwise use the order from scroll.
+        # Currently process_file doesn't add 'index', but process_text does.
+        # Fallback to scroll order for reconstructed text.
+        try:
+            sorted_points = sorted(points, key=lambda x: x.payload.get("index", 0))
+        except:
+            sorted_points = points
+            
+        content = "\n\n".join([p.payload.get("text", "") for p in sorted_points])
+        return content
+
 # Global instance
 qdrant = QdrantProvider()
