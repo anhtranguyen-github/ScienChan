@@ -2,8 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useChat, Message } from '@/hooks/use-chat';
+import { useSettings } from '@/hooks/use-settings';
+import { useThreads } from '@/hooks/use-threads';
 import { cn } from '@/lib/utils';
-import { Send, Cpu, Loader2, Wrench, Bot, Trash2, User, Settings as SettingsIcon } from 'lucide-react';
+import {
+  Send, Cpu, Loader2, Wrench, Bot, Trash2, User,
+  Settings as SettingsIcon, Lightbulb, LightbulbOff,
+  Plus, ChevronDown, ChevronRight, MessageSquare, Database
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { KnowledgeBase } from '@/components/knowledge-base';
 import { ToolsManager } from '@/components/tools-manager';
@@ -12,12 +18,24 @@ import { ChatMessage } from '@/components/chat-message';
 import { SourceViewer } from '@/components/source-viewer';
 
 export default function ChatPage() {
-  const { messages, isLoading, sendMessage, clearChat } = useChat();
+  const { messages, isLoading, sendMessage, clearChat, threadId, setThreadId } = useChat();
+  const { threads, refreshThreads } = useThreads();
+  const { settings, updateSettings } = useSettings();
   const [input, setInput] = useState('');
   const [showTools, setShowTools] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+  const [isKBOpen, setIsKBOpen] = useState(true);
   const [activeSource, setActiveSource] = useState<{ id: number; name: string; content: string } | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'error' | 'info' } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -30,45 +48,174 @@ export default function ChatPage() {
     if (!input.trim() || isLoading) return;
     sendMessage(input);
     setInput('');
+    // Refresh threads list when a new message starts a new thread (or just periodically)
+    setTimeout(refreshThreads, 1000);
+  };
+
+  const handleNewChat = () => {
+    clearChat();
+    refreshThreads();
+  };
+
+  const selectThread = (id: string) => {
+    setThreadId(id);
+    localStorage.setItem('chat_thread_id', id);
+  };
+
+  const handleCitationClick = (id: number, message: Message) => {
+    const source = message.sources?.find(s => s.id === id);
+    if (source) {
+      setActiveSource(source);
+    } else {
+      setNotification({
+        message: `Citation [${id}] content is no longer available in history metadata.`,
+        type: 'error'
+      });
+    }
+  };
+
+  const toggleThinkingMode = async () => {
+    if (!settings) return;
+    await updateSettings({ show_reasoning: !settings.show_reasoning });
   };
 
   return (
     <div className="flex h-screen bg-[#0a0a0b] text-white overflow-hidden font-sans">
       {/* Sidebar - Modern Dark Glass */}
-      <aside className="w-80 bg-[#121214] border-r border-white/5 flex flex-col p-6 gap-6 overflow-hidden">
-        <div className="flex items-center gap-3 px-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <Cpu size={22} className="text-white" />
+      <aside className="w-80 bg-[#121214] border-r border-white/5 flex flex-col overflow-hidden">
+        {/* Sidebar Header */}
+        <div className="p-6 pb-2">
+          <div className="flex items-center gap-3 px-2 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Cpu size={22} className="text-white" />
+            </div>
+            <span className="text-lg font-bold tracking-tight">AI Architect</span>
           </div>
-          <span className="text-lg font-bold tracking-tight">AI Architect</span>
+
+          <button
+            onClick={handleNewChat}
+            className="flex items-center gap-3 w-full p-4 rounded-2xl bg-blue-600 hover:bg-blue-500 transition-all border border-blue-400/20 group shrink-0 shadow-lg shadow-blue-600/10"
+          >
+            <Plus size={18} className="text-white" />
+            <span className="text-sm font-bold">New Chat</span>
+          </button>
         </div>
 
-        <button
-          onClick={clearChat}
-          className="flex items-center gap-3 w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group shrink-0"
-        >
-          <Trash2 size={18} className="text-gray-400 group-hover:text-white" />
-          <span className="text-sm font-medium">Clear Conversations</span>
-        </button>
+        {/* Sidebar Scrollable Content */}
+        <div className="flex-1 flex flex-col overflow-hidden px-4 min-h-0">
+          {/* Thread History Section */}
+          <div className={cn(
+            "flex flex-col min-h-0 transition-all duration-500 ease-in-out py-4",
+            isHistoryOpen ? "flex-1" : "flex-none"
+          )}>
+            <button
+              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+              className="flex items-center justify-between w-full px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <MessageSquare size={14} />
+                <span>Chat History</span>
+              </div>
+              {isHistoryOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
 
-        <button
-          onClick={() => setShowTools(true)}
-          className="flex items-center gap-3 w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group shrink-0"
-        >
-          <Wrench size={18} className="text-gray-400 group-hover:text-white" />
-          <span className="text-sm font-medium">Manage Tools</span>
-        </button>
+            <AnimatePresence initial={false}>
+              {isHistoryOpen && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex-1 overflow-y-auto custom-scrollbar space-y-1 mt-2"
+                >
+                  {threads.length === 0 ? (
+                    <div className="px-4 py-3 text-[11px] text-gray-600 italic">No recent conversations</div>
+                  ) : (
+                    threads.map((thread) => (
+                      <button
+                        key={thread.id}
+                        onClick={() => selectThread(thread.id)}
+                        className={cn(
+                          "flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all group text-left",
+                          threadId === thread.id
+                            ? "bg-white/10 text-white border border-white/10"
+                            : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                        )}
+                      >
+                        <MessageSquare size={14} className={cn(threadId === thread.id ? "text-blue-400" : "text-gray-600 group-hover:text-gray-400")} />
+                        <span className="text-xs font-medium truncate flex-1">{thread.title}</span>
+                        {thread.has_thinking && (
+                          <Lightbulb size={12} className="text-yellow-500/50 group-hover:text-yellow-500 transition-colors" />
+                        )}
+                      </button>
+                    ))
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-        <button
-          onClick={() => setShowSettings(true)}
-          className="flex items-center gap-3 w-full p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 group shrink-0"
-        >
-          <SettingsIcon size={18} className="text-gray-400 group-hover:text-white" />
-          <span className="text-sm font-medium">Global Settings</span>
-        </button>
+          <div className="h-px bg-white/5 my-4 mx-2 shrink-0" />
 
-        <div className="flex-1 overflow-hidden min-h-0">
-          <KnowledgeBase />
+          {/* Knowledge Base Section */}
+          <div className={cn(
+            "flex flex-col min-h-0 transition-all duration-500 ease-in-out py-4",
+            isKBOpen ? "flex-1" : "flex-none"
+          )}>
+            <button
+              onClick={() => setIsKBOpen(!isKBOpen)}
+              className="flex items-center justify-between w-full px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors group shrink-0"
+            >
+              <div className="flex items-center gap-2">
+                <Database size={14} />
+                <span>Knowledge Base</span>
+              </div>
+              {isKBOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+
+            <AnimatePresence initial={false}>
+              {isKBOpen && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex-1 min-h-0 mt-2 overflow-hidden"
+                >
+                  <KnowledgeBase />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="p-4 bg-[#0a0a0b]/50 border-t border-white/5 space-y-2">
+          <button
+            onClick={() => setShowTools(true)}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/5 transition-all group text-gray-400 hover:text-white"
+          >
+            <Wrench size={16} className="group-hover:text-blue-400 transition-colors" />
+            <span className="text-sm font-medium">Manage Tools</span>
+          </button>
+
+          <button
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-white/5 transition-all group text-gray-400 hover:text-white"
+          >
+            <SettingsIcon size={16} className="group-hover:text-purple-400 transition-colors" />
+            <span className="text-sm font-medium">Global Settings</span>
+          </button>
+
+          <div className="mt-4 px-4 py-3 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/20">
+                <User size={14} className="text-blue-400" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold text-gray-300">Pro Developer</span>
+                <span className="text-[9px] text-gray-500 font-medium">Online & Synced</span>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
 
@@ -83,6 +230,30 @@ export default function ChatPage() {
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             <h2 className="text-lg font-semibold">Live Reasoning Session</h2>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleThinkingMode}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all active:scale-95 text-xs font-bold uppercase tracking-wider",
+                settings?.show_reasoning
+                  ? "bg-blue-500/10 border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]"
+                  : "bg-white/5 border-white/10 text-gray-500"
+              )}
+            >
+              {settings?.show_reasoning ? (
+                <>
+                  <Lightbulb size={14} className="animate-pulse" />
+                  <span>Thinking ON</span>
+                </>
+              ) : (
+                <>
+                  <LightbulbOff size={14} />
+                  <span>Thinking OFF</span>
+                </>
+              )}
+            </button>
           </div>
         </header>
 
@@ -122,11 +293,9 @@ export default function ChatPage() {
               <ChatMessage
                 key={message.id}
                 message={message}
+                showReasoning={settings?.show_reasoning}
                 isLoading={isLoading && message.id === messages[messages.length - 1].id}
-                onCitationClick={(id) => {
-                  const source = message.sources?.find(s => s.id === id);
-                  if (source) setActiveSource(source);
-                }}
+                onCitationClick={(id) => handleCitationClick(id, message)}
               />
             ))}
 
@@ -178,9 +347,47 @@ export default function ChatPage() {
         </div>
       </main>
       <AnimatePresence>
-        {showTools && <ToolsManager onClose={() => setShowTools(false)} />}
-        {showSettings && <SettingsManager onClose={() => setShowSettings(false)} />}
-        {activeSource && <SourceViewer source={activeSource} onClose={() => setActiveSource(null)} />}
+        {showTools && (
+          <ToolsManager
+            key="tools-modal"
+            onClose={() => setShowTools(false)}
+          />
+        )}
+        {showSettings && (
+          <SettingsManager
+            key="settings-modal"
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+        {activeSource && (
+          <SourceViewer
+            key="source-viewer-modal"
+            source={activeSource}
+            onClose={() => setActiveSource(null)}
+          />
+        )}
+
+        {/* Notifications */}
+        {notification && (
+          <motion.div
+            key="notification-toast"
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            className={cn(
+              "fixed bottom-32 left-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl border text-sm font-medium flex items-center gap-3",
+              notification.type === 'error'
+                ? "bg-red-500/10 border-red-500/20 text-red-400"
+                : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+            )}
+          >
+            <div className={cn(
+              "w-2 h-2 rounded-full",
+              notification.type === 'error' ? "bg-red-500" : "bg-blue-500"
+            )} />
+            {notification.message}
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
