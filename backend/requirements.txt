@@ -19,3 +19,5 @@ transformers
 torch
 sentence-transformers
 voyageai
+motor
+langgraph-checkpoint-mongodb
