@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { API_ROUTES } from '@/lib/api-config';
 
 export interface AppSettings {
     llm_provider: string;
@@ -18,7 +19,7 @@ export function useSettings() {
 
     const fetchSettings = useCallback(async () => {
         try {
-            const res = await fetch('http://localhost:8000/settings/');
+            const res = await fetch(API_ROUTES.SETTINGS);
             const data = await res.json();
             setSettings(data);
         } catch (err) {
@@ -30,7 +31,7 @@ export function useSettings() {
 
     const updateSettings = async (updates: Partial<AppSettings>) => {
         try {
-            const res = await fetch('http://localhost:8000/settings/', {
+            const res = await fetch(API_ROUTES.SETTINGS, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updates),
