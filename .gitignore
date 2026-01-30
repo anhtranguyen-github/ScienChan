@@ -57,4 +57,9 @@ frontend/test-results/
 # Data
 backend/data/*.json
 !backend/data/.keep
+
+# Documentation and Plans
+docs/
+plans/
+scripts/
 mongo_data/
