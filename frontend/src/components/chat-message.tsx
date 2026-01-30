@@ -1,16 +1,19 @@
-import React from 'react';
-import { Bot, User } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bot, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Message } from '@/hooks/use-chat';
 
 interface ChatMessageProps {
     message: Message;
     isLoading?: boolean;
     onCitationClick: (sourceId: number) => void;
+    showReasoning?: boolean;
 }
 
-export function ChatMessage({ message, isLoading, onCitationClick }: ChatMessageProps) {
+export function ChatMessage({ message, isLoading, onCitationClick, showReasoning = true }: ChatMessageProps) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
     const renderContent = (content: string) => {
         if (message.role === 'user') return content;
 
@@ -51,31 +54,57 @@ export function ChatMessage({ message, isLoading, onCitationClick }: ChatMessage
             </div>
 
             <div className="flex flex-col gap-3 min-w-0 flex-1">
-                {message.role === 'assistant' && (message.reasoning_steps?.length || message.tools?.length) && (
-                    <div className="flex flex-wrap gap-2 mb-1">
-                        {message.tools?.map((tool, idx) => (
-                            <span key={idx} className="text-[11px] font-bold px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-sm">
-                                {tool}
-                            </span>
-                        ))}
+                {message.role === 'assistant' && (message.reasoning_steps?.length || message.tools?.length) && showReasoning && (
+                    <div className="flex flex-col gap-2 mb-1">
+                        <div className="flex flex-wrap gap-2">
+                            {message.tools?.map((tool, idx) => (
+                                <span key={idx} className="text-[11px] font-bold px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-sm">
+                                    {tool}
+                                </span>
+                            ))}
+                        </div>
+
                         {(message.reasoning_steps?.length || 0) > 0 && (
-                            <div className="w-full mt-2 p-3 rounded-xl bg-white/5 border border-white/5 text-[12px] text-gray-400 font-medium">
-                                <span className="text-indigo-400 font-bold block mb-1 uppercase tracking-tighter text-[10px]">Thinking Process:</span>
-                                <ul className="space-y-1">
-                                    {message.reasoning_steps?.map((step, idx) => (
-                                        <li key={idx} className="flex gap-2">
-                                            <span className="text-indigo-500 opacity-50">•</span>
-                                            {step}
-                                        </li>
-                                    ))}
-                                </ul>
+                            <div className="w-full mt-1 overflow-hidden transition-all duration-300">
+                                <button
+                                    onClick={() => setIsExpanded(!isExpanded)}
+                                    className="flex items-center gap-2 text-indigo-400 font-bold uppercase tracking-tighter text-[10px] hover:text-indigo-300 transition-colors py-1 focus:outline-none"
+                                >
+                                    <span>Thinking Process:</span>
+                                    {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                    <span className="text-[9px] font-normal opacity-50 ml-1">
+                                        ({message.reasoning_steps?.length} steps)
+                                    </span>
+                                </button>
+
+                                <AnimatePresence initial={false}>
+                                    {isExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="mt-2 p-4 rounded-xl bg-white/5 border border-white/5 text-[12px] text-gray-400 font-medium shadow-inner ring-1 ring-white/5">
+                                                <ul className="space-y-2">
+                                                    {message.reasoning_steps?.map((step, idx) => (
+                                                        <li key={idx} className="flex gap-3 items-start">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/40 mt-1.5 shrink-0" />
+                                                            <span className="leading-relaxed">{step}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         )}
                     </div>
                 )}
 
                 <div className={cn(
-                    "p-6 rounded-3xl leading-relaxed text-[15px] shadow-sm whitespace-pre-wrap",
+                    "p-6 rounded-3xl leading-relaxed text-[15px] shadow-sm whitespace-pre-wrap transition-all",
                     message.role === 'user'
                         ? "bg-[#1e1e21] border border-purple-500/20 text-gray-100 rounded-tr-none"
                         : "bg-[#161619] border border-white/5 text-gray-200 rounded-tl-none"
