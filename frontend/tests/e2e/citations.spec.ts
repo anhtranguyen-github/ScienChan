@@ -41,10 +41,7 @@ test.describe('Citations and Source Viewer', () => {
         await streamResponsePromise;
 
         // 3. Wait for the response to contain the citation [1]
-        // We use a broader locator and wait for text to appear
-        const assistantMessage = page.locator('.bg-assistant'); // This class might not be there, checking chat-message.tsx...
-        // Actually ChatMessage uses conditional classes but we can look for the citation button
-
+        // Look for the citation button
         await expect(page.locator('button:has-text("1")')).toBeVisible({ timeout: 20000 });
 
         // 4. Click the citation

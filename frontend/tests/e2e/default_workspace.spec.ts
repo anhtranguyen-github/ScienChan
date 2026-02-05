@@ -12,8 +12,7 @@ test.describe('Default Workspace', () => {
     });
 
     test('should not show delete button for default workspace', async ({ page }) => {
-        // Default workspace card should exist
-        const defaultCard = page.getByText('System Default').locator('..');
+        // Default workspace should be visible
         await expect(page.getByText('Default Workspace')).toBeVisible();
 
         // Hover over card to potentially reveal delete button
