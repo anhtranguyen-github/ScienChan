@@ -5,10 +5,11 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
     FileText, Upload, Trash2, Share2, Search,
-    Loader2, AlertCircle, Filter, Grid, List
+    Loader2, AlertCircle, Filter, Grid, List, Network
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
+import { DocumentGraph } from '@/components/documents/document-graph';
 
 interface Document {
     id: string;
@@ -30,7 +31,7 @@ export default function DocumentsPage() {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+    const [viewMode, setViewMode] = useState<'grid' | 'list' | 'graph'>('list');
     const [statusFilter, setStatusFilter] = useState<string>('all');
 
     useEffect(() => {
@@ -139,8 +140,19 @@ export default function DocumentsPage() {
                             "p-2 rounded",
                             viewMode === 'grid' ? "bg-white/10 text-white" : "text-gray-500"
                         )}
+                        title="Grid View"
                     >
                         <Grid size={16} />
+                    </button>
+                    <button
+                        onClick={() => setViewMode('graph')}
+                        className={cn(
+                            "p-2 rounded",
+                            viewMode === 'graph' ? "bg-white/10 text-white" : "text-gray-500"
+                        )}
+                        title="Graph View"
+                    >
+                        <Network size={16} />
                     </button>
                 </div>
             </div>
@@ -186,7 +198,7 @@ export default function DocumentsPage() {
                                             <FileText size={16} className="text-gray-500" />
                                             <span className="text-white font-medium">{doc.filename}</span>
                                             {doc.shared_with.length > 0 && (
-                                                <Share2 size={12} className="text-blue-400" title="Shared" />
+                                                <Share2 size={12} className="text-blue-400" />
                                             )}
                                         </div>
                                     </td>
@@ -211,7 +223,7 @@ export default function DocumentsPage() {
                             ))}
                         </tbody>
                     </table>
-                ) : (
+                ) : viewMode === 'grid' ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {filteredDocs.map((doc) => (
                             <Link
@@ -234,6 +246,8 @@ export default function DocumentsPage() {
                             </Link>
                         ))}
                     </div>
+                ) : (
+                    <DocumentGraph workspaceId={workspaceId} />
                 )}
             </div>
         </div>
