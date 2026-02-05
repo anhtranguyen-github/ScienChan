@@ -78,7 +78,7 @@ export function useWorkspaces() {
         localStorage.setItem('currentWorkspaceId', ws.id);
     };
 
-    const createWorkspace = async (payload: { name: string; description?: string }) => {
+    const createWorkspace = async (payload: { name: string; description?: string; rag_engine?: string }) => {
         try {
             const res = await fetch(API_ROUTES.WORKSPACES, {
                 method: 'POST',

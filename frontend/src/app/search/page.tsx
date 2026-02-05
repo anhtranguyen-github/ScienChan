@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
     Search, FileText, MessageSquare,
-    Loader2, X, ArrowRight, Clock
+    Loader2, X, ArrowRight, Clock, Box
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
@@ -137,9 +137,9 @@ function SearchContent() {
                         type: 'chat',
                         id: threadId,
                         title: threadTitle,
-                        snippet: thread.last_message || '',
-                        workspace_id: thread.workspace_id,
-                        created_at: thread.last_active
+                        snippet: (thread.last_message as string) || '',
+                        workspace_id: thread.workspace_id as string,
+                        created_at: thread.last_active as string
                     });
                 });
             }

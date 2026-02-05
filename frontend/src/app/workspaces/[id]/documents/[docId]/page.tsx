@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
     FileText, ArrowLeft, Database, Calendar,
     Layers, Download,
-    Loader2, AlertCircle, Search
+    Loader2, AlertCircle, type LucideIcon
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api-config';
 import { cn } from '@/lib/utils';
@@ -33,6 +33,13 @@ interface DocumentDetail {
     chunk_overlap?: number;
 }
 
+interface Chunk {
+    id: string;
+    text: string;
+    index: number;
+    metadata: Record<string, unknown>;
+}
+
 export default function DocumentDetailPage() {
     const params = useParams();
     const router = useRouter();
@@ -43,48 +50,49 @@ export default function DocumentDetailPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'info' | 'chunks'>('info');
-    const [chunks, setChunks] = useState<any[]>([]);
+    const [chunks, setChunks] = useState<Chunk[]>([]);
     const [isChunksLoading, setIsChunksLoading] = useState(false);
 
     useEffect(() => {
+        const fetchDocument = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const res = await fetch(`${API_BASE_URL}/documents/${docId}?workspace_id=${workspaceId}`);
+                if (!res.ok) throw new Error('Document not found');
+                const data = await res.json();
+                setDocument(data);
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+                setError(errorMessage);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
         fetchDocument();
     }, [docId, workspaceId]);
 
     useEffect(() => {
+        const fetchChunks = async () => {
+            setIsChunksLoading(true);
+            try {
+                const res = await fetch(`${API_BASE_URL}/documents/${docId}/chunks?workspace_id=${workspaceId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setChunks(data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch chunks', err);
+            } finally {
+                setIsChunksLoading(false);
+            }
+        };
+
         if (activeTab === 'chunks' && chunks.length === 0) {
             fetchChunks();
         }
-    }, [activeTab]);
-
-    const fetchChunks = async () => {
-        setIsChunksLoading(true);
-        try {
-            const res = await fetch(`${API_BASE_URL}/documents/${docId}/chunks?workspace_id=${workspaceId}`);
-            if (res.ok) {
-                const data = await res.json();
-                setChunks(data);
-            }
-        } catch (err) {
-            console.error('Failed to fetch chunks', err);
-        } finally {
-            setIsChunksLoading(false);
-        }
-    };
-
-    const fetchDocument = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const res = await fetch(`${API_BASE_URL}/documents/${docId}?workspace_id=${workspaceId}`);
-            if (!res.ok) throw new Error('Document not found');
-            const data = await res.json();
-            setDocument(data);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    }, [activeTab, chunks.length, docId, workspaceId]);
 
     if (isLoading) {
         return (
@@ -262,7 +270,7 @@ export default function DocumentDetailPage() {
     );
 }
 
-function Section({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
+function Section({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children: React.ReactNode }) {
     return (
         <div className="bg-[#121214] rounded-2xl border border-white/5 overflow-hidden">
             <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">

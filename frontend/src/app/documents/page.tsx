@@ -12,6 +12,17 @@ import {
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_ROUTES } from '@/lib/api-config';
+import Link from 'next/link';
+
+interface InspectedPoint {
+    id: string | number;
+    vector_size: number;
+    vector_preview: number[];
+    payload: {
+        text?: string;
+        [key: string]: unknown;
+    };
+}
 
 export default function DocumentsPage() {
     const { documents, isLoading, deleteDocument, updateWorkspaceAction, inspectDocument } = useDocuments();
@@ -19,7 +30,7 @@ export default function DocumentsPage() {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
-    const [inspectedPoints, setInspectedPoints] = useState<any[]>([]);
+    const [inspectedPoints, setInspectedPoints] = useState<InspectedPoint[]>([]);
     const [documentContent, setDocumentContent] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'segments' | 'source'>('segments');
     const [loadingInspect, setLoadingInspect] = useState(false);
@@ -105,12 +116,12 @@ export default function DocumentsPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-8">
                     <div className="flex items-center gap-6">
-                        <a
+                        <Link
                             href="/"
                             className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-gray-400 hover:text-white"
                         >
                             <ChevronLeft size={20} />
-                        </a>
+                        </Link>
                         <div>
                             <h1 className="text-4xl font-black tracking-tight">Knowledge Bank</h1>
                             <p className="text-gray-500 mt-1">Global document assets and cross-workspace orchestration.</p>
@@ -228,7 +239,7 @@ export default function DocumentsPage() {
                                                 <div className="flex items-center gap-1">
                                                     {doc.shared_with.length > 0 ? (
                                                         <div className="flex -space-x-2">
-                                                            {doc.shared_with.slice(0, 3).map((wsId, i) => (
+                                                            {doc.shared_with.slice(0, 3).map(wsId => (
                                                                 <div key={wsId} className="w-6 h-6 rounded-full bg-indigo-500 border-2 border-[#121214] flex items-center justify-center text-[8px] font-black text-white" title={wsId}>
                                                                     {wsId[0].toUpperCase()}
                                                                 </div>
@@ -357,7 +368,7 @@ export default function DocumentsPage() {
                                     </div>
                                 ) : activeTab === 'segments' ? (
                                     <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar lg:grid lg:grid-cols-2 gap-4 pb-10">
-                                        {inspectedPoints.map((point, i) => (
+                                        {inspectedPoints.map(point => (
                                             <div key={point.id} className="bg-[#0a0a0b]/50 border border-white/5 rounded-[2rem] p-6 text-xs font-mono mb-4 h-fit">
                                                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/5">
                                                     <span className="text-indigo-500 font-bold tracking-tighter">Point ID: {String(point.id).slice(0, 16)}...</span>

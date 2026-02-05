@@ -64,10 +64,10 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
         onClose();
         if (type === 'workspace') {
             router.push(`/workspaces/${id}`);
-        } else if (type === 'thread') {
+        } else if (type === 'thread' && extra?.workspace_id) {
             localStorage.setItem('chat_thread_id', id);
             router.push(`/workspaces/${extra.workspace_id}`);
-        } else if (type === 'document') {
+        } else if (type === 'document' && extra?.workspace_id) {
             router.push(`/workspaces/${extra.workspace_id}`);
         }
     };
@@ -157,7 +157,7 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                                         </div>
                                         <div className="flex-1 overflow-hidden">
                                             <div className="font-bold text-white group-hover:text-indigo-400 transition-colors">{ws.name}</div>
-                                            <div className="text-xs text-gray-500 truncate">{ws.description || 'No description'}</div>
+                                            <div className="text-xs text-gray-500 truncate">{(ws.description as string) || 'No description'}</div>
                                         </div>
                                     </button>
                                 ))}
@@ -171,16 +171,16 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                                 {results?.threads.map((thread) => (
                                     <button
                                         key={thread.id}
-                                        onClick={() => navigateTo('thread', thread.id, { workspace_id: thread.workspace_id })}
+                                        onClick={() => navigateTo('thread', thread.id, { workspace_id: thread.workspace_id as string })}
                                         className="w-full flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition-all text-left group"
                                     >
                                         <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
                                             <MessageSquare size={20} />
                                         </div>
                                         <div className="flex-1 overflow-hidden">
-                                            <div className="font-bold text-white group-hover:text-blue-400 transition-colors truncate">{thread.title}</div>
+                                            <div className="font-bold text-white group-hover:text-blue-400 transition-colors truncate">{(thread.title as string)}</div>
                                             <div className="flex flex-wrap gap-1 mt-1">
-                                                {thread.tags?.map((tag: string) => (
+                                                {(thread.tags as string[])?.map((tag: string) => (
                                                     <span key={tag} className="text-[8px] px-1.5 py-0.5 rounded-md bg-white/5 text-gray-500 font-bold tracking-tighter uppercase whitespace-nowrap border border-white/5">
                                                         {tag}
                                                     </span>
@@ -199,7 +199,7 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                                 {results?.documents.map((doc) => (
                                     <button
                                         key={doc.id}
-                                        onClick={() => navigateTo('document', doc.id, { workspace_id: doc.workspace_id })}
+                                        onClick={() => navigateTo('document', doc.id, { workspace_id: doc.workspace_id as string })}
                                         className="w-full flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition-all text-left group"
                                     >
                                         <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
@@ -208,8 +208,8 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                                         <div className="flex-1 overflow-hidden">
                                             <div className="font-bold text-white group-hover:text-purple-400 transition-colors truncate">{doc.name}</div>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">{doc.extension}</span>
-                                                <span className="text-[8px] font-bold text-indigo-500 uppercase tracking-widest">{doc.workspace_id}</span>
+                                                <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">{(doc.extension as string)}</span>
+                                                <span className="text-[8px] font-bold text-indigo-500 uppercase tracking-widest">{(doc.workspace_id as string)}</span>
                                             </div>
                                         </div>
                                     </button>

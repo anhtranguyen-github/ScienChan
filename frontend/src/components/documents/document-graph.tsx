@@ -116,7 +116,7 @@ export function DocumentGraph({ workspaceId }: { workspaceId: string }) {
                     // Draw node circle
                     const r = 5;
                     ctx.beginPath();
-                    ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+                    ctx.arc(node.x || 0, node.y || 0, r, 0, 2 * Math.PI, false);
                     ctx.fillStyle = '#3b82f6';
                     ctx.fill();
 
@@ -133,7 +133,7 @@ export function DocumentGraph({ workspaceId }: { workspaceId: string }) {
 
                     // Truncate long names
                     const truncatedLabel = label.length > 20 ? label.substring(0, 17) + '...' : label;
-                    ctx.fillText(truncatedLabel, node.x, node.y + r + fontSize + 2);
+                    ctx.fillText(truncatedLabel, node.x || 0, (node.y || 0) + r + fontSize + 2);
                 }}
             />
 

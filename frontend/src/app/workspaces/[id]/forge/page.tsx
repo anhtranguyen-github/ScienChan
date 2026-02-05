@@ -6,8 +6,7 @@ import { Hammer, Zap, Activity, Cpu } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function ForgePage() {
-    const params = useParams();
-    const workspaceId = params.id as string;
+    useParams();
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden">

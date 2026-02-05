@@ -17,7 +17,7 @@ export default function WorkspaceLayout({
     const params = useParams();
     const router = useRouter();
     const workspaceId = params.id as string;
-    const { workspaces, currentWorkspace, switchWorkspace } = useWorkspaces();
+    const { workspaces, switchWorkspace } = useWorkspaces();
 
     const [showSwitcher, setShowSwitcher] = useState(false);
 
