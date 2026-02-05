@@ -31,11 +31,17 @@ export function WorkspaceProvider({ workspaceId, children }: WorkspaceProviderPr
 
     const ws = workspaces.find(w => w.id === workspaceId) || currentWorkspace;
 
+    // Type assertion for workspace with settings
+    interface WorkspaceWithSettings extends Workspace {
+        settings?: { rag_engine?: string };
+    }
+    const wsWithSettings = ws as WorkspaceWithSettings | null;
+
     const value: WorkspaceContextType = {
         currentWorkspace: ws || null,
         workspaceId,
         isDefault: workspaceId === 'default',
-        ragEngine: (ws as any)?.settings?.rag_engine || 'basic',
+        ragEngine: wsWithSettings?.settings?.rag_engine || 'basic',
         documentCount: ws?.stats?.doc_count || 0,
     };
 

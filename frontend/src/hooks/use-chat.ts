@@ -47,9 +47,10 @@ export function useChat(workspaceId: string = "default") {
             } else {
                 showError("History Retrieval Failed", "The server could not retrieve chat history for this thread.", `ID: ${id}`);
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Failed to fetch chat history:', err);
-            showError("Network Error", err.message || "Failed to connect to chat history service.");
+            const errorMessage = err instanceof Error ? err.message : "Failed to connect to chat history service.";
+            showError("Network Error", errorMessage);
         }
     }, [showError]);
 
@@ -176,10 +177,11 @@ export function useChat(workspaceId: string = "default") {
                     throw err;
                 },
             });
-        } catch (error: any) {
+        } catch (error) {
             console.error('Failed to send message:', error);
             setIsLoading(false);
-            showError("Dispatch Error", error.message || "Failed to initialize communication with the architect.");
+            const errorMessage = error instanceof Error ? error.message : "Failed to initialize communication with the architect.";
+            showError("Dispatch Error", errorMessage);
         }
     }, [threadId, workspaceId, showError]);
 

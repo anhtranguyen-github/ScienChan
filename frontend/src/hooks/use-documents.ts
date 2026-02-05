@@ -3,7 +3,7 @@ import { API_ROUTES } from '@/lib/api-config';
 
 export interface DocumentPoint {
     id: string;
-    payload: any;
+    payload: Record<string, unknown>;
 }
 
 export interface Document {
