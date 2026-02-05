@@ -40,7 +40,8 @@ describe('ChatPage', () => {
     it('renders chat input', () => {
         render(<ChatPage />);
 
-        expect(screen.getByPlaceholderText('Ask a question...')).toBeInTheDocument();
+        // The placeholder is dynamic based on mode, default is 'fast'
+        expect(screen.getByPlaceholderText('Message in fast mode...')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Send message' })).toBeInTheDocument();
     });
 
@@ -70,7 +71,7 @@ describe('ChatPage', () => {
     it('enables send button when input has text', () => {
         render(<ChatPage />);
 
-        const input = screen.getByPlaceholderText('Ask a question...');
+        const input = screen.getByPlaceholderText('Message in fast mode...');
         fireEvent.change(input, { target: { value: 'Hello' } });
 
         const sendButton = screen.getByRole('button', { name: 'Send message' });
@@ -84,7 +85,7 @@ describe('ChatPage', () => {
         fireEvent.click(thinkingButton);
 
         // Check that Thinking button is now active (has bg-blue-600 class)
-        expect(thinkingButton).toHaveClass('bg-blue-600');
+        expect(thinkingButton).toHaveClass('bg-blue-600/20');
     });
 });
 

@@ -63,10 +63,10 @@ backend/data/*.json
 !backend/data/.keep
 
 # Documentation and Plans
-docs/
-plans/
-scripts/
-test-resources/
+/docs/
+/plans/
+/scripts/
+/test-resources/
 TESTING_CONSTRAINTS_AND_BUGS.md
 mongo_data/
 minio_data/

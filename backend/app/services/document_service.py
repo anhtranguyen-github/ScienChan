@@ -11,6 +11,7 @@ from fastapi import UploadFile
 
 from backend.app.rag.ingestion import ingestion_pipeline
 from backend.app.rag.qdrant_provider import qdrant
+from qdrant_client.http import models as qmodels
 from backend.app.core.minio import minio_manager
 from backend.app.core.mongodb import mongodb_manager
 from backend.app.services.task_service import task_service
@@ -173,7 +174,7 @@ class DocumentService:
         # Get all workspaces to map IDs to Names
         ws_cursor = db.workspaces.find({}, {"id": 1, "name": 1})
         workspaces = await ws_cursor.to_list(length=1000)
-        ws_map = {ws["id"]: ws["name"] for ws in workspaces}
+        ws_map = {ws.get("id", ""): ws.get("name", "Unknown") for ws in workspaces if ws.get("id")}
         
         for d in docs:
             if "_id" in d:
@@ -215,13 +216,17 @@ class DocumentService:
     async def delete(name: str, workspace_id: str, vault_delete: bool = False):
         db = mongodb_manager.get_async_database()
         # Find document by name (could be owner or shared)
-        doc = await db.documents.find_one({
-            "filename": name,
-            "$or": [
-                {"workspace_id": workspace_id},
-                {"shared_with": workspace_id}
-            ]
-        })
+        # For vault delete from 'vault' workspace, find by filename globally
+        if vault_delete and workspace_id == "vault":
+            doc = await db.documents.find_one({"filename": name})
+        else:
+            doc = await db.documents.find_one({
+                "filename": name,
+                "$or": [
+                    {"workspace_id": workspace_id},
+                    {"shared_with": workspace_id}
+                ]
+            })
         if not doc: return
 
         if vault_delete:
