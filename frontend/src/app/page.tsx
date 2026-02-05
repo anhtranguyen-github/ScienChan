@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useWorkspaces } from '@/hooks/use-workspaces';
 import {
   Plus, Search, FileText, MessageSquare,
-  Trash2, Edit3, Loader2, AlertCircle, X, Zap, Database
+  Trash2, Loader2, AlertCircle, X, Zap, Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

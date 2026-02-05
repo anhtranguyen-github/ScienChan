@@ -5,7 +5,7 @@ import { useWorkspaces, Workspace } from '@/hooks/use-workspaces';
 import { WorkspaceProvider } from '@/context/workspace-context';
 import { WorkspaceHeader } from '@/components/layout/workspace-header';
 import { useState } from 'react';
-import { X, Check, Plus, ChevronDown, Search, Layout } from 'lucide-react';
+import { X, Check, Layout } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 

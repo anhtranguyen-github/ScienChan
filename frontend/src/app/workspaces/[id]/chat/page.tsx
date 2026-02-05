@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { useChat } from '@/hooks/use-chat';
+import { useChat, Message } from '@/hooks/use-chat';
 import { useSettings } from '@/hooks/use-settings';
 import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/lib/api-config';
 import {
     Send, Bot, Loader2, Zap, Brain, MessageSquare,
-    AlertCircle, FileText, Plus, Trash2, History, X, Edit2
+    Plus, Trash2, History, X
 } from 'lucide-react';
 import { ChatMessage } from '@/components/chat-message';
 import { CitationModal } from '@/components/chat/citation';
@@ -22,6 +22,12 @@ interface Thread {
     message_count: number;
 }
 
+interface Source {
+    id: number;
+    name: string;
+    content: string;
+}
+
 export default function ChatPage() {
     const params = useParams();
     const workspaceId = params.id as string;
@@ -31,7 +37,7 @@ export default function ChatPage() {
 
     const [input, setInput] = useState('');
     const [mode, setMode] = useState<ChatMode>('fast');
-    const [activeSource, setActiveSource] = useState<any>(null);
+    const [activeSource, setActiveSource] = useState<Source | null>(null);
     const [showHistory, setShowHistory] = useState(false);
     const [threads, setThreads] = useState<Thread[]>([]);
     const [isLoadingThreads, setIsLoadingThreads] = useState(false);
@@ -44,13 +50,7 @@ export default function ChatPage() {
     }, [messages]);
 
     // Fetch threads when history panel opens
-    useEffect(() => {
-        if (showHistory) {
-            fetchThreads();
-        }
-    }, [showHistory, workspaceId]);
-
-    const fetchThreads = async () => {
+    const fetchThreads = useCallback(async () => {
         setIsLoadingThreads(true);
         try {
             const res = await fetch(`${API_BASE_URL}/chat/threads?workspace_id=${workspaceId}`);
@@ -58,12 +58,19 @@ export default function ChatPage() {
                 const data = await res.json();
                 setThreads(data.threads || []);
             }
-        } catch (err) {
-            console.error('Failed to fetch threads', err);
+        } catch {
+            // ignore
         } finally {
             setIsLoadingThreads(false);
         }
-    };
+    }, [workspaceId]);
+
+    // Fetch threads when history panel opens
+    useEffect(() => {
+        if (showHistory) {
+            fetchThreads();
+        }
+    }, [showHistory, fetchThreads]);
 
     const selectThread = (id: string) => {
         setThreadId(id);
@@ -112,8 +119,8 @@ export default function ChatPage() {
         setInput('');
     };
 
-    const handleCitationClick = (id: number, message: any) => {
-        const source = message.sources?.find((s: any) => s.id === id);
+    const handleCitationClick = (id: number, message: Message) => {
+        const source = message.sources?.find((s: Source) => s.id === id);
         if (source) {
             setActiveSource(source);
         }

@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-    FileText, ArrowLeft, Database, Hash, Calendar,
-    Box, Layers, Share2, Trash2, Download, Eye,
+    FileText, ArrowLeft, Database, Calendar,
+    Layers, Download,
     Loader2, AlertCircle, Search
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api-config';
