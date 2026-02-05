@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Upload, FileText, Trash2, CheckCircle, Loader2,
-    ExternalLink, Database, Search, Share2, Eye,
+    Upload, FileText, Trash2, Loader2,
+    Database, Search, Eye,
     Plus, Filter, Shield, ArrowRight, AlertTriangle,
-    ArrowRightLeft, Layers, MoreVertical, X, Zap
+    ArrowRightLeft, Layers, X, Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import { API_ROUTES } from '@/lib/api-config';
@@ -24,6 +24,25 @@ interface Document {
     workspace_name?: string;
 }
 
+interface Task {
+    id: string;
+    status: string;
+    progress?: number;
+    metadata: {
+        workspace_id: string;
+        filename?: string;
+    };
+}
+
+interface BackendDocument {
+    id: string;
+    filename: string;
+    extension: string;
+    chunks: number;
+    workspace_id: string;
+    workspace_name?: string;
+}
+
 interface KnowledgeBaseProps {
     workspaceId?: string;
     isSidebar?: boolean;
@@ -33,13 +52,13 @@ interface KnowledgeBaseProps {
 export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGlobal = false }: KnowledgeBaseProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isUploading, setIsUploading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [_error, setError] = useState<string | null>(null);
     const { showError } = useError();
     const [activeSource, setActiveSource] = useState<{ id: number; name: string; content: string } | null>(null);
     const [isViewing, setIsViewing] = useState(false);
-    const [isSharing, setIsSharing] = useState<string | null>(null);
     const [shareTarget, setShareTarget] = useState('');
-    const [activeTasks, setActiveTasks] = useState<any[]>([]);
+    const [activeTasks, setActiveTasks] = useState<Task[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [deletingDoc, setDeletingDoc] = useState<Document | null>(null);
     const [managingDoc, setManagingDoc] = useState<Document | null>(null);
@@ -47,34 +66,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
     const [isManaging, setIsManaging] = useState(false);
 
     // Poll for active tasks
-    useEffect(() => {
-        const pollTasks = async () => {
-            try {
-                const res = await fetch(`${API_ROUTES.TASKS}?type=ingestion`);
-                if (res.ok) {
-                    const data = await res.json();
-                    const pendingTasks = data.tasks.filter((t: any) =>
-                        (t.status === 'pending' || t.status === 'processing') &&
-                        (isGlobal || t.metadata.workspace_id === workspaceId)
-                    );
-                    setActiveTasks(pendingTasks);
-
-                    // If any task just completed, refresh documents
-                    const hasJustCompleted = data.tasks.some((t: any) => t.status === 'completed' && t.progress === 100);
-                    if (hasJustCompleted) {
-                        fetchDocuments();
-                    }
-                }
-            } catch (err) {
-                console.error('Task polling failed', err);
-            }
-        };
-
-        const interval = setInterval(pollTasks, 2000);
-        return () => clearInterval(interval);
-    }, [workspaceId]);
-
-    const fetchDocuments = async () => {
+    const fetchDocuments = React.useCallback(async () => {
         try {
             const url = isGlobal
                 ? API_ROUTES.DOCUMENTS_ALL
@@ -82,9 +74,8 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
 
             const res = await fetch(url);
             if (res.ok) {
-                const data = await res.json();
-                // Map backend properties to component interface
-                const mappedDocs = data.map((doc: any) => ({
+                const data: BackendDocument[] = await res.json();
+                const mappedDocs = data.map((doc) => ({
                     id: doc.id,
                     name: doc.filename,
                     extension: doc.extension,
@@ -98,13 +89,39 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
         } catch (err) {
             console.error('Failed to fetch documents', err);
         }
-    };
+    }, [isGlobal, workspaceId]);
+
+    useEffect(() => {
+        const pollTasks = async () => {
+            try {
+                const res = await fetch(`${API_ROUTES.TASKS}?type=ingestion`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const pendingTasks = data.tasks.filter((t: Task) =>
+                        (t.status === 'pending' || t.status === 'processing') &&
+                        (isGlobal || t.metadata.workspace_id === workspaceId)
+                    );
+                    setActiveTasks(pendingTasks);
+
+                    const hasJustCompleted = data.tasks.some((t: Task) => t.status === 'completed' && t.progress === 100);
+                    if (hasJustCompleted) {
+                        fetchDocuments();
+                    }
+                }
+            } catch (err) {
+                console.error('Task polling failed', err);
+            }
+        };
+
+        const interval = setInterval(pollTasks, 2000);
+        return () => clearInterval(interval);
+    }, [workspaceId, isGlobal, fetchDocuments]);
 
     useEffect(() => {
         if (workspaceId) {
             fetchDocuments();
         }
-    }, [workspaceId]);
+    }, [workspaceId, fetchDocuments]);
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -122,16 +139,17 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                 body: formData,
             });
             if (res.ok) {
-                const data = await res.json();
                 // Task is now handled by the polling effect
+                await res.json();
             } else {
-                const data = await res.json();
-                setError(data.detail || 'Upload failed');
-                showError("Ingestion Rejected", data.detail || 'The document could not be processed.', `File: ${file.name}`);
+                const errorData = await res.json();
+                setError(errorData.detail || 'Upload failed');
+                showError("Ingestion Rejected", errorData.detail || 'The document could not be processed.', `File: ${file.name}`);
             }
-        } catch (err: any) {
+        } catch (err) {
             setError('Connection error');
-            showError("Network Error", err.message || 'Failed to reach storage cluster.');
+            const errorMessage = err instanceof Error ? err.message : 'Failed to reach storage cluster.';
+            showError("Network Error", errorMessage);
         } finally {
             setIsUploading(false);
         }
@@ -155,9 +173,10 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                 const data = await res.json();
                 showError("Operation Failed", data.detail || 'Document deletion failed.', `Resource: ${name}`);
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Failed to delete document', err);
-            showError("Network Error", err.message || 'Failed to complete deletion request.');
+            const errorMessage = err instanceof Error ? err.message : 'Failed to complete deletion request.';
+            showError("Network Error", errorMessage);
         }
     };
 
@@ -186,9 +205,10 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                 const data = await res.json();
                 showError("Transition Failed", data.detail || 'Workspace update failed.', `Document: ${managingDoc.name}`);
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Failed to manage document', err);
-            showError("Network Error", err.message || 'Transmission lost during re-indexing.');
+            const errorMessage = err instanceof Error ? err.message : 'Transmission lost during re-indexing.';
+            showError("Network Error", errorMessage);
         } finally {
             setIsManaging(false);
         }
@@ -209,9 +229,10 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                 const data = await res.json();
                 showError("Retrieval Failure", data.detail || 'Could not fetch document content.', `Source: ${name}`);
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Failed to view document', err);
-            showError("Network Error", err.message || 'Connection to secondary index lost.');
+            const errorMessage = err instanceof Error ? err.message : 'Connection to secondary index lost.';
+            showError("Network Error", errorMessage);
         } finally {
             setIsViewing(false);
         }

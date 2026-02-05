@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, FileText, Database, Calendar, Hash, Layers, Box } from 'lucide-react';
+import { X, FileText, Database, Hash, Layers, Box, LucideIcon } from 'lucide-react';
 
 interface CitationSource {
     id: number;
@@ -119,7 +119,7 @@ export function CitationModal({ source, onClose }: CitationModalProps) {
     );
 }
 
-function MetaItem({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+function MetaItem({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
     return (
         <div className="p-3 bg-white/5 rounded-lg">
             <div className="flex items-center gap-2 mb-1">

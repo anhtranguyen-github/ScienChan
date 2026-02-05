@@ -4,9 +4,8 @@ import React, { useState } from 'react';
 import { useTools, ToolDefinition } from '@/hooks/use-tools';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Wrench, X, Plus, Trash2, Power, Check,
-    Hammer, Terminal, Globe, Zap, ArrowRight,
-    Shield, Cpu, Settings
+    X, Plus, Trash2, Power,
+    Hammer, Terminal, Globe, Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -125,7 +124,7 @@ export function ToolsManager({ onClose }: { onClose?: () => void }) {
                                             ].map((type) => (
                                                 <button
                                                     key={type.id}
-                                                    onClick={() => setNewTool({ ...newTool, type: type.id as any })}
+                                                    onClick={() => setNewTool({ ...newTool, type: type.id as 'custom' | 'mcp' })}
                                                     className={cn(
                                                         "p-5 rounded-2xl border text-left transition-all",
                                                         newTool.type === type.id

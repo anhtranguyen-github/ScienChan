@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Workspace } from '@/hooks/use-workspaces';
-import { ChevronDown, Plus, Layout, Check, Settings } from 'lucide-react';
+import { ChevronDown, Plus, Layout, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -10,7 +11,7 @@ interface WorkspaceSwitcherProps {
     workspaces: Workspace[];
     currentWorkspace: Workspace | null;
     onSelect: (ws: Workspace) => void;
-    onCreate: (name: string) => void;
+    onCreate: (name: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export function WorkspaceSwitcher({
@@ -28,7 +29,7 @@ export function WorkspaceSwitcher({
         e.preventDefault();
         setError(null);
         if (newWsName.trim()) {
-            const result = await (onCreate as any)(newWsName);
+            const result = await onCreate(newWsName);
             if (result?.success) {
                 setNewWsName('');
                 setIsCreating(false);
@@ -127,13 +128,13 @@ export function WorkspaceSwitcher({
                                             <Plus size={14} />
                                             New Workspace
                                         </button>
-                                        <a
+                                        <Link
                                             href="/"
                                             className="flex items-center gap-2 w-full p-3 rounded-xl hover:bg-white/5 text-xs font-bold text-gray-400 hover:text-white transition-all border-t border-white/5"
                                         >
                                             <Layout size={14} />
                                             Select Workspace
-                                        </a>
+                                        </Link>
                                     </div>
                                 )}
                             </div>
