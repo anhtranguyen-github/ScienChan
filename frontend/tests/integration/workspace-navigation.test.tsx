@@ -20,7 +20,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Dynamic workspace state for integration testing
-let mockWorkspaces = [
+const mockWorkspaces = [
     { id: 'default', name: 'Default Workspace', stats: { doc_count: 5, thread_count: 3 } },
     { id: 'ws-1', name: 'Test Workspace', stats: { doc_count: 10, thread_count: 7 } },
 ];
