@@ -142,120 +142,131 @@ export default function ChatPage() {
 
     return (
         <div className="flex-1 flex h-full relative">
-            {/* History Sidebar */}
-            <div className={cn(
-                "absolute inset-y-0 left-0 w-80 bg-[#0a0a0b] border-r border-white/10 z-40 transition-transform duration-300",
-                showHistory ? "translate-x-0" : "-translate-x-full"
+            {/* History Sidebar - Drawer Style */}
+            <aside className={cn(
+                "fixed inset-y-0 left-0 w-80 bg-[#0a0a0b]/95 backdrop-blur-2xl border-r border-white/10 z-[100] transition-all duration-500 ease-in-out shadow-[20px_0_50px_rgba(0,0,0,0.5)]",
+                showHistory ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"
             )}>
-                <div className="flex items-center justify-between p-4 border-b border-white/10">
-                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                        <History size={16} />
-                        Chat History
-                    </h3>
+                <div className="flex items-center justify-between p-6 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
+                            <History size={18} className="text-blue-500" />
+                        </div>
+                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">Archive</h3>
+                    </div>
                     <button
                         onClick={() => setShowHistory(false)}
-                        className="p-1.5 rounded hover:bg-white/10 text-gray-500 hover:text-white"
+                        className="p-2 rounded-xl hover:bg-white/5 text-gray-500 hover:text-white transition-all"
                     >
-                        <X size={16} />
+                        <X size={20} />
                     </button>
                 </div>
 
-                <div className="p-3">
+                <div className="p-4">
                     <button
                         onClick={startNewChat}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-all"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-all shadow-lg shadow-blue-600/20"
                     >
-                        <Plus size={16} />
-                        New Chat
+                        <Plus size={18} />
+                        New Conversation
                     </button>
                 </div>
 
-                <div className="overflow-y-auto h-[calc(100%-120px)]">
+                <div className="overflow-y-auto h-[calc(100%-180px)] px-3 custom-scrollbar">
                     {isLoadingThreads ? (
-                        <div className="flex items-center justify-center py-8">
-                            <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+                        <div className="flex flex-col items-center justify-center py-12 gap-3 text-gray-500">
+                            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                            <span className="text-xs font-medium uppercase tracking-tighter">Indexing Threads...</span>
                         </div>
                     ) : threads.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500 text-sm">
-                            No chat history yet
+                        <div className="text-center py-12 px-6">
+                            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                                <MessageSquare size={20} className="text-gray-700" />
+                            </div>
+                            <p className="text-gray-500 text-xs font-medium">Your conversation history will appear here.</p>
                         </div>
                     ) : (
-                        <div className="px-3 space-y-1">
+                        <div className="space-y-2">
                             {threads.map((thread) => (
-                                <button
+                                <div
                                     key={thread.id}
                                     onClick={() => selectThread(thread.id)}
                                     className={cn(
-                                        "w-full flex items-center justify-between p-3 rounded-lg text-left transition-all group",
+                                        "w-full flex items-center justify-between p-4 rounded-xl text-left transition-all group border cursor-pointer select-none",
                                         threadId === thread.id
-                                            ? "bg-white/10 text-white"
-                                            : "hover:bg-white/5 text-gray-400"
+                                            ? "bg-blue-500/10 border-blue-500/30 text-white ring-1 ring-blue-500/20"
+                                            : "hover:bg-white/5 border-transparent text-gray-400"
                                     )}
                                 >
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">
-                                            {thread.title || 'Untitled Chat'}
-                                        </p>
-                                        <p className="text-xs text-gray-600">
-                                            {formatDate(thread.last_active)} • {thread.message_count} msgs
-                                        </p>
+                                    <div className="flex-1 min-w-0 pr-4">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className={cn(
+                                                "w-1.5 h-1.5 rounded-full",
+                                                threadId === thread.id ? "bg-blue-500 shadow-[0_0_5px_#3b82f6]" : "bg-gray-700"
+                                            )} />
+                                            <p className="text-sm font-semibold truncate">
+                                                {thread.title || 'Untitled Session'}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
+                                            <span>{formatDate(thread.last_active)}</span>
+                                            <span className="w-1 h-1 rounded-full bg-gray-800" />
+                                            <span>{thread.message_count} messages</span>
+                                        </div>
                                     </div>
                                     <button
                                         onClick={(e) => deleteThread(thread.id, e)}
-                                        className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-all"
+                                        className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-gray-600 hover:text-red-400 transition-all"
                                     >
                                         <Trash2 size={14} />
                                     </button>
-                                </button>
+                                </div>
                             ))}
                         </div>
                     )}
                 </div>
-            </div>
+            </aside>
 
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col h-full">
-                {/* Mode Selector Header */}
-                <header className="p-4 border-b border-white/10 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                {/* Header */}
+                <header className="p-4 border-b border-white/10 flex items-center justify-between bg-[#0a0a0b]/50 backdrop-blur-md">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={() => setShowHistory(!showHistory)}
                             className={cn(
-                                "p-2 rounded-lg transition-all",
+                                "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all",
                                 showHistory
                                     ? "bg-blue-600 text-white"
                                     : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white"
                             )}
-                            title="Chat History"
                         >
                             <History size={18} />
+                            <span className="text-sm font-medium">History</span>
                         </button>
 
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">Mode:</span>
-                            <div className="flex gap-1 p-1 bg-white/5 rounded-lg">
-                                {modeOptions.map((opt) => (
-                                    <button
-                                        key={opt.id}
-                                        onClick={() => handleModeChange(opt.id as ChatMode)}
-                                        className={cn(
-                                            "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all",
-                                            mode === opt.id
-                                                ? "bg-blue-600 text-white"
-                                                : "text-gray-400 hover:text-white hover:bg-white/5"
-                                        )}
-                                        title={opt.description}
-                                    >
-                                        <opt.icon size={14} />
-                                        <span>{opt.label}</span>
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="h-4 w-px bg-white/10" />
+
+                        <div className="flex flex-col">
+                            <h2 className="text-sm font-semibold text-white">Chat Session</h2>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Workspace: {workspaceId}</p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span>Workspace: {workspaceId}</span>
+                    <div className="flex items-center gap-3">
+                        {threadId && (
+                            <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                <span className="text-[10px] text-blue-400 font-mono">ID: {threadId.substring(0, 8)}</span>
+                            </div>
+                        )}
+                        <button
+                            onClick={clearChat}
+                            className="p-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-all"
+                            title="Clear Current Session"
+                        >
+                            <Trash2 size={18} />
+                        </button>
                     </div>
                 </header>
 
@@ -310,34 +321,75 @@ export default function ChatPage() {
                 </div>
 
                 {/* Input */}
-                <footer className="p-4 border-t border-white/10">
-                    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-                        <div className="flex items-center gap-3 bg-[#121214] border border-white/10 rounded-xl p-2">
-                            <input
-                                id="chat-input"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                placeholder="Ask a question..."
-                                className="flex-1 bg-transparent border-none focus:outline-none py-3 px-4 text-white placeholder:text-gray-500"
-                                disabled={isLoading}
-                            />
-                            <button
-                                type="submit"
-                                disabled={isLoading || !input.trim()}
-                                className="w-12 h-12 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all"
-                                aria-label="Send message"
-                            >
-                                <Send size={20} />
-                            </button>
+                <footer className="p-6 border-t border-white/10 mt-auto">
+                    <div className="max-w-4xl mx-auto space-y-4">
+                        {/* Mode Selector in Tray */}
+                        <div className="flex items-center gap-3 justify-center mb-1">
+                            <div className="flex gap-1 p-1 bg-black/40 border border-white/5 rounded-xl">
+                                {modeOptions.map((opt) => (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => handleModeChange(opt.id as ChatMode)}
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all group relative",
+                                            mode === opt.id
+                                                ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
+                                                : "text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent"
+                                        )}
+                                    >
+                                        <opt.icon size={14} className={cn(mode === opt.id ? "text-blue-400" : "text-gray-600 group-hover:text-gray-400")} />
+                                        <span className="font-medium">{opt.label}</span>
+                                        {mode === opt.id && (
+                                            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]" />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </form>
+
+                        <form onSubmit={handleSubmit} className="relative group">
+                            <div className="flex items-center gap-3 bg-[#121214] border border-white/10 group-focus-within:border-blue-500/50 rounded-2xl p-2.5 transition-all shadow-2xl">
+                                <div className="pl-4 text-gray-500">
+                                    {mode === 'fast' ? <Zap size={18} /> : mode === 'thinking' ? <Brain size={18} /> : <MessageSquare size={18} />}
+                                </div>
+                                <input
+                                    id="chat-input"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    placeholder={`Message in ${mode} mode...`}
+                                    className="flex-1 bg-transparent border-none focus:outline-none py-3 px-2 text-white placeholder:text-gray-600 text-sm"
+                                    disabled={isLoading}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isLoading || !input.trim()}
+                                    className={cn(
+                                        "w-11 h-11 rounded-xl flex items-center justify-center transition-all",
+                                        input.trim()
+                                            ? "bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]"
+                                            : "bg-white/5 text-gray-600 cursor-not-allowed"
+                                    )}
+                                    aria-label="Send message"
+                                >
+                                    {isLoading ? (
+                                        <Loader2 size={20} className="animate-spin" />
+                                    ) : (
+                                        <Send size={20} />
+                                    )}
+                                </button>
+                            </div>
+                            <p className="mt-3 text-[10px] text-center text-gray-600 uppercase tracking-[0.2em] font-medium">
+                                Press Enter to send • {modeOptions.find(o => o.id === mode)?.description}
+                            </p>
+                        </form>
+                    </div>
                 </footer>
             </div>
 
             {/* Overlay for sidebar */}
             {showHistory && (
                 <div
-                    className="absolute inset-0 bg-black/50 z-30"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] transition-opacity duration-500"
                     onClick={() => setShowHistory(false)}
                 />
             )}
