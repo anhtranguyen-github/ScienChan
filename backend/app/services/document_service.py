@@ -176,11 +176,33 @@ class DocumentService:
         return docs
 
     @staticmethod
+    async def get_by_id_or_name(name: str) -> Optional[Dict]:
+        db = mongodb_manager.get_async_database()
+        doc = await db.documents.find_one({
+            "$or": [
+                {"id": name},
+                {"filename": name}
+            ]
+        })
+        if doc and "_id" in doc:
+            doc["_id"] = str(doc["_id"])
+        return doc
+
+    @staticmethod
     async def get_content(name: str) -> Optional[str]:
         db = mongodb_manager.get_async_database()
-        doc = await db.documents.find_one({"filename": name})
-        workspace_id = doc.get("workspace_id") if doc else None
-        return await qdrant.get_document_content("knowledge_base", name, workspace_id=workspace_id)
+        # Try finding by ID first, then by filename
+        doc = await db.documents.find_one({
+            "$or": [
+                {"id": name},
+                {"filename": name}
+            ]
+        })
+        if not doc:
+            return None
+            
+        workspace_id = doc.get("workspace_id")
+        return await qdrant.get_document_content("knowledge_base", doc["filename"], workspace_id=workspace_id)
 
     @staticmethod
     async def delete(name: str, workspace_id: str, vault_delete: bool = False):
@@ -222,18 +244,31 @@ class DocumentService:
     async def inspect(name: str) -> List[Dict]:
         from qdrant_client.http import models as qmodels
         db = mongodb_manager.get_async_database()
-        doc = await db.documents.find_one({"filename": name})
-        workspace_id = doc.get("workspace_id") if doc else None
+        # Support both ID and Filename
+        doc = await db.documents.find_one({
+            "$or": [
+                {"id": name},
+                {"filename": name}
+            ]
+        })
+        if not doc:
+            return []
+            
+        workspace_id = doc.get("workspace_id")
         collection_name = await qdrant.get_effective_collection("knowledge_base", workspace_id)
         
-        response = await qdrant.client.scroll(
-            collection_name=collection_name,
-            scroll_filter=qmodels.Filter(must=[qmodels.FieldCondition(key="doc_id", match=qmodels.MatchValue(value=doc["id"]))]),
-            limit=100,
-            with_payload=True,
-            with_vectors=True
-        )
-        return [{"id": p.id, "payload": p.payload, "vector_size": len(p.vector) if p.vector else 0} for p in response[0]]
+        try:
+            response = await qdrant.client.scroll(
+                collection_name=collection_name,
+                scroll_filter=qmodels.Filter(must=[qmodels.FieldCondition(key="doc_id", match=qmodels.MatchValue(value=doc["id"]))]),
+                limit=100,
+                with_payload=True,
+                with_vectors=True
+            )
+            return [{"id": p.id, "payload": p.payload, "vector_size": len(p.vector) if p.vector else 0} for p in response[0]]
+        except Exception as e:
+            logger.error(f"Inspect failed for {name}: {e}")
+            return []
 
     @staticmethod
     async def update_workspaces(name: str, target_workspace_id: str, action: str, force_reindex: bool = False):

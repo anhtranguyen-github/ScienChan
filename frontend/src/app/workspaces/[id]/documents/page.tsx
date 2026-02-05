@@ -30,16 +30,30 @@ export default function DocumentsPage() {
 
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isUploading, setIsUploading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list' | 'graph'>('list');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetchDocuments();
     }, [workspaceId]);
 
-    const fetchDocuments = async () => {
-        setIsLoading(true);
+    // Polling for indexing status
+    useEffect(() => {
+        const hasIndexing = documents.some(doc => doc.status === 'indexing');
+        if (!hasIndexing) return;
+
+        const interval = setInterval(() => {
+            fetchDocuments(false); // Fetch without full loading state
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [documents]);
+
+    const fetchDocuments = async (showLoading = true) => {
+        if (showLoading) setIsLoading(true);
         try {
             const res = await fetch(`${API_BASE_URL}/documents?workspace_id=${workspaceId}`);
             if (res.ok) {
@@ -49,7 +63,57 @@ export default function DocumentsPage() {
         } catch (err) {
             console.error('Failed to fetch documents', err);
         } finally {
-            setIsLoading(false);
+            if (showLoading) setIsLoading(false);
+        }
+    };
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !workspaceId) return;
+
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/upload?workspace_id=${workspaceId}`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (res.ok) {
+                // Refresh documents list after a short delay to allow ingestion to start
+                setTimeout(fetchDocuments, 1000);
+            } else {
+                const error = await res.json();
+                alert(`Upload failed: ${error.detail || 'Unknown error'}`);
+            }
+        } catch (err) {
+            console.error('Upload error:', err);
+            alert('Failed to upload document due to network error.');
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleDelete = async (filename: string) => {
+        if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/documents/${encodeURIComponent(filename)}?workspace_id=${workspaceId}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                setDocuments(prev => prev.filter(doc => doc.filename !== filename));
+            } else {
+                const error = await res.json();
+                alert(`Delete failed: ${error.detail || 'Unknown error'}`);
+            }
+        } catch (err) {
+            console.error('Delete error:', err);
+            alert('Failed to delete document.');
         }
     };
 
@@ -82,19 +146,39 @@ export default function DocumentsPage() {
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Header */}
-            <header className="p-4 border-b border-white/10 flex items-center justify-between gap-4">
+            <header className="p-4 border-b border-white/10 flex items-center justify-between gap-4 bg-[#0a0a0b]/50 backdrop-blur-md">
                 <div>
                     <h1 className="text-xl font-bold text-white">Documents</h1>
                     <p className="text-sm text-gray-500">
                         {documents.length} documents in workspace
                     </p>
                 </div>
-                <button
-                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium flex items-center gap-2 transition-all"
-                >
-                    <Upload size={16} />
-                    Upload Document
-                </button>
+                <div className="flex items-center gap-2">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleUpload}
+                        className="hidden"
+                        accept=".pdf,.txt,.docx,.md"
+                    />
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className={cn(
+                            "px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all shadow-lg shadow-blue-600/20",
+                            isUploading
+                                ? "bg-blue-600/50 cursor-not-allowed text-white/50"
+                                : "bg-blue-600 hover:bg-blue-500 text-white"
+                        )}
+                    >
+                        {isUploading ? (
+                            <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                            <Upload size={16} />
+                        )}
+                        {isUploading ? 'Uploading...' : 'Upload Document'}
+                    </button>
+                </div>
             </header>
 
             {/* Filters */}
@@ -213,8 +297,12 @@ export default function DocumentsPage() {
                                     <td className="py-3 text-sm text-gray-500">{formatDate(doc.created_at)}</td>
                                     <td className="py-3">
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); /* delete logic */ }}
-                                            className="p-2 rounded hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-all"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDelete(doc.filename);
+                                            }}
+                                            className="p-2 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
+                                            title="Delete Document"
                                         >
                                             <Trash2 size={14} />
                                         </button>

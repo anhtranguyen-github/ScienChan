@@ -38,10 +38,13 @@ async def list_all_documents():
 
 @router.get("/documents/{name:path}")
 async def get_document(name: str):
-    content = await document_service.get_content(name)
-    if content is None:
+    doc = await document_service.get_by_id_or_name(name)
+    if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    return {"name": name, "content": content}
+    
+    content = await document_service.get_content(name)
+    doc["content"] = content
+    return doc
 
 @router.delete("/documents/{name:path}")
 async def delete_document(name: str, workspace_id: str = "default", vault_delete: bool = False):
