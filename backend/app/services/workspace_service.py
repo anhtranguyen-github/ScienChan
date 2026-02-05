@@ -29,9 +29,9 @@ class WorkspaceService:
         if not name:
             raise ValueError("Workspace name cannot be empty.")
             
-        illegal_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+        illegal_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '[', ']', '{', '}', '(', ')', ';', '&', '$', '#', '@', '!']
         if any(char in name for char in illegal_chars):
-            raise ValueError(f"Workspace name contains illegal characters: {' '.join(illegal_chars)}")
+            raise ValueError(f"Workspace name contains illegal characters. Please use only letters, numbers, underscores, and hyphens.")
 
         # Check for duplicate name
         existing = await db.workspaces.find_one({"name": name})
@@ -93,9 +93,9 @@ class WorkspaceService:
             new_name = data["name"].strip()
             if not new_name:
                 raise ValueError("Workspace name cannot be empty.")
-            illegal_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+            illegal_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '[', ']', '{', '}', '(', ')', ';', '&', '$', '#', '@', '!']
             if any(char in new_name for char in illegal_chars):
-                raise ValueError(f"Workspace name contains illegal characters: {' '.join(illegal_chars)}")
+                raise ValueError(f"Workspace name contains invalid characters. Please use only letters, numbers, underscores, and hyphens.")
             
             existing = await db.workspaces.find_one({"name": new_name, "id": {"$ne": workspace_id}})
             if existing:

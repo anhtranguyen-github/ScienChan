@@ -107,4 +107,30 @@ test.describe('Document Upload Failure Handling', () => {
         await expect(page.getByText('File too large')).toBeVisible();
     });
 
+    test('should show user-friendly error for invalid filenames (illegal path)', async ({ page }) => {
+        // Mock "illegal path" error from backend (MinIO usually throws this)
+        await page.route('**/upload**', async route => {
+            await route.fulfill({
+                status: 400,
+                contentType: 'application/json',
+                body: JSON.stringify({ detail: "Unable to add filesystem: <illegal path>" })
+            });
+        });
+
+        await page.goto('/workspaces/default/documents');
+
+        const fileInput = page.locator('input[type="file"]');
+        await expect(page.getByRole('button', { name: 'Upload Document' })).toBeVisible();
+
+        await fileInput.setInputFiles({
+            name: 'invalid:file.pdf',
+            mimeType: 'application/pdf',
+            buffer: Buffer.from('fake content')
+        });
+
+        // Expect specific "Invalid Filename" modal
+        await expect(page.getByText('Invalid Filename')).toBeVisible();
+        await expect(page.getByText('The filename contains characters that are not allowed')).toBeVisible();
+    });
+
 });
