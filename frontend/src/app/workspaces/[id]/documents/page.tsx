@@ -8,6 +8,7 @@ import {
     Loader2, Grid, List, Network
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api-config';
+import { useError } from '@/context/error-context';
 import { cn } from '@/lib/utils';
 import { DocumentGraph } from '@/components/documents/document-graph';
 
@@ -55,6 +56,60 @@ export default function DocumentsPage() {
         fetchDocuments();
     }, [workspaceId, fetchDocuments]);
 
+    const { showError } = useError();
+    const notifiedTasksRef = React.useRef<Set<string>>(new Set());
+
+    // Poll for active tasks and failures
+    useEffect(() => {
+        const pollTasks = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/tasks/?type=ingestion`);
+                if (res.ok) {
+                    const data = await res.json();
+
+                    // Check for active failures we haven't shown yet
+                    const failedTasks = data.tasks.filter((t: any) =>
+                        t.status === 'failed' &&
+                        t.metadata.workspace_id === workspaceId &&
+                        !notifiedTasksRef.current.has(t.id)
+                    );
+
+                    for (const task of failedTasks) {
+                        showError(
+                            "Ingestion Failed",
+                            task.message || "The system encountered an error while processing this document.",
+                            `File: ${task.metadata.filename || 'Unknown'}`
+                        );
+                        notifiedTasksRef.current.add(task.id);
+
+                        // Also stop the "loading" state if we were specifically uploading this file?
+                        // But polling runs independently. IsUploading is for the POST request mostly.
+                    }
+
+                    // Check for completions to refresh the list
+                    const hasJustCompleted = data.tasks.some((t: any) =>
+                        t.status === 'completed' &&
+                        t.progress === 100 &&
+                        t.metadata.workspace_id === workspaceId &&
+                        !notifiedTasksRef.current.has(t.id)
+                    );
+
+                    if (hasJustCompleted) {
+                        // Mark as seen so we don't refresh infinitely if the completed task stays in the list
+                        // Actually, completed tasks might hang around. 
+                        // We can just refresh.
+                        fetchDocuments(false);
+                    }
+                }
+            } catch (err) {
+                console.error('Task polling failed', err);
+            }
+        };
+
+        const interval = setInterval(pollTasks, 2000);
+        return () => clearInterval(interval);
+    }, [workspaceId, fetchDocuments, showError]);
+
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !workspaceId) return;
@@ -70,15 +125,16 @@ export default function DocumentsPage() {
             });
 
             if (res.ok) {
-                // Refresh documents list after a short delay to allow ingestion to start
-                setTimeout(fetchDocuments, 1000);
+                // Task is now handled by the polling effect
+                await res.json();
             } else {
                 const error = await res.json();
-                alert(`Upload failed: ${error.detail || 'Unknown error'}`);
+                showError("Ingestion Rejected", error.detail || 'Upload failed', `File: ${file.name}`);
             }
         } catch (err) {
             console.error('Upload error:', err);
-            alert('Failed to upload document due to network error.');
+            const errorMessage = err instanceof Error ? err.message : 'Network error';
+            showError("Network Error", errorMessage);
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -97,11 +153,12 @@ export default function DocumentsPage() {
                 setDocuments(prev => prev.filter(doc => doc.filename !== filename));
             } else {
                 const error = await res.json();
-                alert(`Delete failed: ${error.detail || 'Unknown error'}`);
+                showError("Delete Failed", error.detail || 'Could not delete document', `File: ${filename}`);
             }
         } catch (err) {
             console.error('Delete error:', err);
-            alert('Failed to delete document.');
+            const errorMessage = err instanceof Error ? err.message : 'Network error';
+            showError("Network Error", errorMessage);
         }
     };
 
