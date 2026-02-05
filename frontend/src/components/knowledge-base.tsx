@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import {
     Upload, FileText, Trash2, CheckCircle, Loader2,
     ExternalLink, Database, Search, Share2, Eye,
-    Plus, Filter, Shield, ArrowRight
+    Plus, Filter, Shield, ArrowRight, AlertTriangle,
+    ArrowRightLeft, Layers, MoreVertical, X, Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import { API_ROUTES } from '@/lib/api-config';
@@ -40,6 +41,10 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
     const [shareTarget, setShareTarget] = useState('');
     const [activeTasks, setActiveTasks] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [deletingDoc, setDeletingDoc] = useState<Document | null>(null);
+    const [managingDoc, setManagingDoc] = useState<Document | null>(null);
+    const [manageMode, setManageMode] = useState<'move' | 'share'>('share');
+    const [isManaging, setIsManaging] = useState(false);
 
     // Poll for active tasks
     useEffect(() => {
@@ -132,20 +137,60 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
         }
     };
 
-    const handleDelete = async (name: string) => {
+    const handleDelete = async (name: string, vaultDelete: boolean = false) => {
         try {
-            const res = await fetch(`${API_ROUTES.DOCUMENT_DELETE(name)}?workspace_id=${encodeURIComponent(workspaceId)}`, {
+            const url = new URL(API_ROUTES.DOCUMENT_DELETE(name));
+            url.searchParams.append('workspace_id', workspaceId);
+            if (vaultDelete) {
+                url.searchParams.append('vault_delete', 'true');
+            }
+
+            const res = await fetch(url.toString(), {
                 method: 'DELETE',
             });
             if (res.ok) {
                 setDocuments((prev) => prev.filter((d) => d.name !== name));
+                setDeletingDoc(null);
             } else {
                 const data = await res.json();
-                showError("Purge Failed", data.detail || 'Document deletion failed.', `Resource: ${name}`);
+                showError("Operation Failed", data.detail || 'Document deletion failed.', `Resource: ${name}`);
             }
         } catch (err: any) {
             console.error('Failed to delete document', err);
             showError("Network Error", err.message || 'Failed to complete deletion request.');
+        }
+    };
+
+    const handleManage = async () => {
+        if (!managingDoc || !shareTarget) return;
+
+        setIsManaging(true);
+        try {
+            const res = await fetch(API_ROUTES.DOCUMENTS_UPDATE_WS, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: managingDoc.name,
+                    target_workspace_id: shareTarget,
+                    action: manageMode,
+                    force_reindex: true // Trigger re-indexing as required
+                })
+            });
+
+            if (res.ok) {
+                setManagingDoc(null);
+                setShareTarget('');
+                fetchDocuments();
+                alert(`Protocol Executed: ${managingDoc.name} ${manageMode}ed to ${shareTarget}`);
+            } else {
+                const data = await res.json();
+                showError("Transition Failed", data.detail || 'Workspace update failed.', `Document: ${managingDoc.name}`);
+            }
+        } catch (err: any) {
+            console.error('Failed to manage document', err);
+            showError("Network Error", err.message || 'Transmission lost during re-indexing.');
+        } finally {
+            setIsManaging(false);
         }
     };
 
@@ -186,7 +231,7 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                                 <span className="text-[11px] text-gray-400 truncate font-medium">{doc.name}</span>
                             </div>
                             <button
-                                onClick={() => handleDelete(doc.name)}
+                                onClick={() => setDeletingDoc(doc)}
                                 className="opacity-0 group-hover:opacity-100 p-1 text-gray-600 hover:text-red-400 transition-all active:scale-90"
                             >
                                 <Trash2 size={12} />
@@ -379,21 +424,21 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
                                         )}
                                     </button>
 
-                                    {!doc.shared && (
+                                    {!doc.shared && isGlobal && (
                                         <button
-                                            onClick={() => setIsSharing(isSharing === doc.name ? null : doc.name)}
+                                            onClick={() => setManagingDoc(doc)}
                                             className={cn(
-                                                "w-12 h-12 flex items-center justify-center rounded-2xl transition-all active:scale-90 relative",
-                                                isSharing === doc.name ? "bg-indigo-600 text-white shadow-lg" : "bg-white/5 text-gray-500 hover:text-white"
+                                                "w-12 h-12 flex items-center justify-center rounded-2xl transition-all active:scale-90",
+                                                managingDoc?.name === doc.name ? "bg-indigo-600 text-white shadow-lg" : "bg-white/5 text-gray-500 hover:text-indigo-400 hover:bg-white/10"
                                             )}
-                                            title="Share Access"
+                                            title="Manage Availability"
                                         >
-                                            <Share2 size={18} />
+                                            <ArrowRightLeft size={18} />
                                         </button>
                                     )}
 
                                     <button
-                                        onClick={() => handleDelete(doc.name)}
+                                        onClick={() => setDeletingDoc(doc)}
                                         className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white/5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-90"
                                         title="Purge Document"
                                     >
@@ -428,52 +473,148 @@ export function KnowledgeBase({ workspaceId = "default", isSidebar = false, isGl
             </div>
 
             <AnimatePresence>
-                {isSharing && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-md z-[110]"
-                    >
-                        <div className="mx-4 p-8 bg-[#161619] border border-white/10 rounded-[2rem] shadow-2xl">
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
-                                    <Share2 size={18} />
+                {managingDoc && (
+                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                            onClick={() => setManagingDoc(null)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-lg bg-[#121214] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                                        <ArrowRightLeft size={24} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-lg font-black text-white uppercase tracking-tight">Lifecycle Manager</h4>
+                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Global Document Redistribution</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 className="text-xs font-black text-white uppercase tracking-widest">External Access Portal</h4>
-                                    <p className="text-[10px] text-gray-500 font-medium">Grant permission to cross-pollinate data.</p>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-3">
-                                <input
-                                    placeholder="Target ID (e.g. workspace-alpha)"
-                                    value={shareTarget}
-                                    onChange={(e) => setShareTarget(e.target.value)}
-                                    className="flex-1 bg-[#0a0a0b] border border-white/10 rounded-2xl px-5 py-4 text-xs text-white focus:ring-2 ring-indigo-500/20 outline-none placeholder:text-gray-700"
-                                />
                                 <button
-                                    onClick={async () => {
-                                        if (!shareTarget) return;
-                                        const res = await fetch(API_ROUTES.WORKSPACE_SHARE(workspaceId), {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ source_name: isSharing, target_workspace_id: shareTarget })
-                                        });
-                                        if (res.ok) {
-                                            setIsSharing(null);
-                                            setShareTarget('');
-                                            alert(`Permission Granted: ${isSharing} shared with ${shareTarget}`);
-                                        }
-                                    }}
-                                    className="bg-white hover:bg-gray-100 text-black text-[10px] font-black px-8 rounded-2xl transition-all uppercase tracking-widest shadow-lg active:scale-95"
+                                    onClick={() => setManagingDoc(null)}
+                                    className="p-2 text-gray-500 hover:text-white transition-colors"
                                 >
-                                    Grant
+                                    <X size={20} />
                                 </button>
                             </div>
-                        </div>
-                    </motion.div>
+
+                            <div className="p-8 space-y-8">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Distribution Mode</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            onClick={() => setManageMode('share')}
+                                            className={cn(
+                                                "p-4 rounded-2xl border transition-all flex flex-col gap-2 text-left",
+                                                manageMode === 'share' ? "bg-indigo-500/10 border-indigo-500/30 text-white" : "bg-white/5 border-white/5 text-gray-500 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <Layers size={18} />
+                                                {manageMode === 'share' && <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />}
+                                            </div>
+                                            <span className="text-xs font-black uppercase">Assign / Share</span>
+                                            <span className="text-[9px] font-medium leading-relaxed opacity-60">Map document to an additional workspace without removing the current index.</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setManageMode('move')}
+                                            className={cn(
+                                                "p-4 rounded-2xl border transition-all flex flex-col gap-2 text-left",
+                                                manageMode === 'move' ? "bg-orange-500/10 border-orange-500/30 text-white" : "bg-white/5 border-white/5 text-gray-500 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <ArrowRightLeft size={18} />
+                                                {manageMode === 'move' && <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.8)]" />}
+                                            </div>
+                                            <span className="text-xs font-black uppercase">Transfer / Move</span>
+                                            <span className="text-[9px] font-medium leading-relaxed opacity-60">Complete migration to target workspace with automated re-indexing and cleanup.</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Target Cluster ID</label>
+                                    <div className="flex gap-4">
+                                        <input
+                                            placeholder="e.g. workspace-001"
+                                            value={shareTarget}
+                                            onChange={(e) => setShareTarget(e.target.value)}
+                                            className="flex-1 bg-[#0a0a0b] border border-white/10 rounded-2xl px-6 h-14 text-sm text-white focus:ring-2 ring-indigo-500/20 outline-none placeholder:text-gray-700 font-medium"
+                                        />
+                                        <button
+                                            onClick={handleManage}
+                                            disabled={!shareTarget || isManaging}
+                                            className={cn(
+                                                "h-14 px-8 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2",
+                                                manageMode === 'move' ? "bg-orange-500 text-black hover:bg-orange-400" : "bg-indigo-500 text-white hover:bg-indigo-400"
+                                            )}
+                                        >
+                                            {isManaging ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} />}
+                                            Initialize {manageMode}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
+                {deletingDoc && (
+                    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+                            onClick={() => setDeletingDoc(null)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-lg bg-[#121214] border border-red-500/20 rounded-[2.5rem] overflow-hidden shadow-[0_0_50px_rgba(239,68,68,0.15)]"
+                        >
+                            <div className="p-10 text-center">
+                                <div className="w-20 h-20 rounded-[2.5rem] bg-red-500/10 flex items-center justify-center text-red-500 mx-auto mb-8 animate-pulse">
+                                    <AlertTriangle size={40} />
+                                </div>
+                                <h4 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Destructive Operation Pending</h4>
+                                <p className="text-xs text-gray-500 leading-relaxed max-w-[280px] mx-auto font-medium mb-10">
+                                    Please specify the scope of removal for <span className="text-white font-bold">{deletingDoc.name}</span>.
+                                </p>
+
+                                <div className="space-y-4">
+                                    <button
+                                        onClick={() => handleDelete(deletingDoc.name, false)}
+                                        className="w-full py-5 rounded-2xl bg-white/5 border border-white/5 text-white hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-[0.2em]"
+                                    >
+                                        Remove from {deletingDoc.workspace_name || "Workspace"} only
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(deletingDoc.name, true)}
+                                        className="w-full py-5 rounded-2xl bg-red-500 text-black hover:bg-red-400 transition-all text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-red-500/20"
+                                    >
+                                        Purge Entirely from Global Vault
+                                    </button>
+                                    <button
+                                        onClick={() => setDeletingDoc(null)}
+                                        className="w-full py-5 text-[10px] text-gray-500 font-black uppercase tracking-widest hover:text-white transition-colors"
+                                    >
+                                        Abort Request
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
                 )}
 
                 {activeSource && (

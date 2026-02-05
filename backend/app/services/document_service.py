@@ -214,11 +214,19 @@ class DocumentService:
     @staticmethod
     async def delete(name: str, workspace_id: str, vault_delete: bool = False):
         db = mongodb_manager.get_async_database()
-        doc = await db.documents.find_one({"filename": name, "workspace_id": workspace_id})
+        # Find document by name (could be owner or shared)
+        doc = await db.documents.find_one({
+            "filename": name,
+            "$or": [
+                {"workspace_id": workspace_id},
+                {"shared_with": workspace_id}
+            ]
+        })
         if not doc: return
 
         if vault_delete:
-            # Check if this physical file is used by others
+            # GLOBAL DELETE: Purge everything
+            # 1. MinIO removal (check if shared by physical file path)
             others = await db.documents.count_documents({"minio_path": doc["minio_path"], "id": {"$ne": doc["id"]}})
             if others == 0:
                 try:
@@ -226,25 +234,36 @@ class DocumentService:
                 except Exception as e:
                     logger.error(f"MinIO delete failed: {e}")
             
+            # 2. Vector Store removal: Attempt to delete from all potential dimension collections
+            for dim in [384, 768, 1024, 1536, 1792, 3072]:
+                coll = f"knowledge_base_{dim}"
+                if await qdrant.client.collection_exists(coll):
+                    await qdrant.client.delete(
+                        collection_name=coll,
+                        points_selector=qmodels.Filter(must=[qmodels.FieldCondition(key="doc_id", match=qmodels.MatchValue(value=doc["id"]))])
+                    )
+
+            # 3. Database removal
             await db.documents.delete_one({"id": doc["id"]})
-            await qdrant.delete_document("knowledge_base", name, workspace_id=workspace_id)
         else:
-            # SOFT REMOVAL
+            # LOCAL REMOVAL: Remove association from this workspace only
             if doc["workspace_id"] == workspace_id:
+                # Owner is removing. Unassign to 'vault' (system unassigned) instead of deleting
                 await db.documents.update_one({"id": doc["id"]}, {"$set": {"workspace_id": "vault"}})
-            elif workspace_id in doc.get("shared_with", []):
+            else:
+                # Shared instance is removing. Remove from shared_with list
                 await db.documents.update_one({"id": doc["id"]}, {"$pull": {"shared_with": workspace_id}})
             
-            updated_doc = await db.documents.find_one({"id": doc["id"]})
-            if updated_doc:
-                from qdrant_client.http import models as qmodels
-                await qdrant.client.set_payload(
-                    collection_name=await qdrant.get_effective_collection("knowledge_base", workspace_id),
-                    payload={
-                        "workspace_id": updated_doc["workspace_id"],
-                        "shared_with": updated_doc.get("shared_with", [])
-                    },
-                    points=qmodels.Filter(must=[qmodels.FieldCondition(key="doc_id", match=qmodels.MatchValue(value=doc["id"]))])
+            # Cleanup source index for this workspace
+            target_settings = await settings_manager.get_settings(workspace_id)
+            coll = qdrant.get_collection_name(target_settings.embedding_dim)
+            if await qdrant.client.collection_exists(coll):
+                await qdrant.client.delete(
+                    collection_name=coll,
+                    points_selector=qmodels.Filter(must=[
+                        qmodels.FieldCondition(key="doc_id", match=qmodels.MatchValue(value=doc["id"])),
+                        qmodels.FieldCondition(key="workspace_id", match=qmodels.MatchValue(value=workspace_id))
+                    ])
                 )
 
     @staticmethod
@@ -364,8 +383,23 @@ class DocumentService:
 
         # Update MongoDB Association
         if action == "move":
-            await db.documents.update_one({"filename": name}, {"$set": {"workspace_id": target_workspace_id}})
+            source_ws_id = res["workspace_id"]
+            # 1. Update ownership in DB
+            await db.documents.update_one({"id": res["id"]}, {"$set": {"workspace_id": target_workspace_id}})
+            
+            # 2. Cleanup source index (if it's a different workspace)
+            if source_ws_id != target_workspace_id:
+                source_settings = await settings_manager.get_settings(source_ws_id)
+                source_coll = qdrant.get_collection_name(source_settings.embedding_dim)
+                if await qdrant.client.collection_exists(source_coll):
+                    await qdrant.client.delete(
+                        collection_name=source_coll,
+                        points_selector=qmodels.Filter(must=[
+                            qmodels.FieldCondition(key="doc_id", match=qmodels.MatchValue(value=res["id"])),
+                            qmodels.FieldCondition(key="workspace_id", match=qmodels.MatchValue(value=source_ws_id))
+                        ])
+                    )
         elif action == "share":
-            await db.documents.update_one({"filename": name}, {"$addToSet": {"shared_with": target_workspace_id}})
+            await db.documents.update_one({"id": res["id"]}, {"$addToSet": {"shared_with": target_workspace_id}})
 
 document_service = DocumentService()
