@@ -109,7 +109,7 @@ export default function DocumentDetailPage() {
                 <p className="text-gray-400">{error || 'Document not found'}</p>
                 <button
                     onClick={() => router.back()}
-                    className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm"
+                    className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-caption"
                 >
                     Go Back
                 </button>
@@ -138,13 +138,13 @@ export default function DocumentDetailPage() {
                     <ArrowLeft size={18} className="text-gray-400" />
                 </button>
                 <div className="flex-1">
-                    <h1 className="text-xl font-bold text-white">{document.filename}</h1>
-                    <p className="text-sm text-gray-500">
+                    <h1 className="text-h3 font-bold text-white">{document.filename}</h1>
+                    <p className="text-caption text-gray-500">
                         Document ID: {document.id} • Status: {document.status}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm flex items-center gap-2">
+                    <button className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-caption flex items-center gap-2">
                         <Download size={16} />
                         Download
                     </button>
@@ -159,7 +159,7 @@ export default function DocumentDetailPage() {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={cn(
-                                "px-4 py-3 text-sm font-medium capitalize transition-all border-b-2 -mb-px",
+                                "px-4 py-3 text-caption font-medium capitalize transition-all border-b-2 -mb-px",
                                 activeTab === tab
                                     ? "border-blue-500 text-white"
                                     : "border-transparent text-gray-500 hover:text-gray-300"
@@ -236,11 +236,11 @@ export default function DocumentDetailPage() {
                 {activeTab === 'chunks' && (
                     <div className="max-w-5xl mx-auto space-y-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <h2 className="text-h3 font-semibold text-white flex items-center gap-2">
                                 <Layers size={18} className="text-blue-500" />
                                 Index Chunks ({document.chunks})
                             </h2>
-                            <div className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded border border-white/5">
+                            <div className="text-tiny text-gray-500 bg-white/5 px-2 py-1 rounded border border-white/5">
                                 Showing first {chunks.length} chunks
                             </div>
                         </div>
@@ -248,7 +248,7 @@ export default function DocumentDetailPage() {
                         {isChunksLoading ? (
                             <div className="flex flex-col items-center justify-center py-24 gap-4">
                                 <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                                <p className="text-sm text-gray-500">Retrieving chunks from vector store...</p>
+                                <p className="text-caption text-gray-500">Retrieving chunks from vector store...</p>
                             </div>
                         ) : chunks.length > 0 ? (
                             <div className="grid grid-cols-1 gap-4">
@@ -260,7 +260,7 @@ export default function DocumentDetailPage() {
                             <div className="text-center py-24 bg-[#121214] rounded-3xl border border-dashed border-white/5">
                                 <Database className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                                 <p className="text-gray-400 font-medium">No chunks found</p>
-                                <p className="text-sm text-gray-600 mt-1">Make sure the document is successfully indexed.</p>
+                                <p className="text-caption text-gray-600 mt-1">Make sure the document is successfully indexed.</p>
                             </div>
                         )}
                     </div>
@@ -275,7 +275,7 @@ function Section({ title, icon: Icon, children }: { title: string; icon: LucideI
         <div className="bg-[#121214] rounded-2xl border border-white/5 overflow-hidden">
             <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
                 <Icon size={16} className="text-gray-500" />
-                <h3 className="text-sm font-semibold text-gray-300">{title}</h3>
+                <h3 className="text-caption font-semibold text-gray-300">{title}</h3>
             </div>
             <div className="p-4">
                 {children}
@@ -290,11 +290,11 @@ function InfoCard({ label, value, highlight, mono }: { label: string; value: str
             "p-3 rounded-lg",
             highlight ? "bg-blue-500/10 border border-blue-500/20" : "bg-white/5"
         )}>
-            <div className="text-[10px] text-gray-500 uppercase mb-1">{label}</div>
+            <div className="text-tiny text-gray-500 uppercase mb-1">{label}</div>
             <div className={cn(
-                "text-sm font-medium truncate",
+                "text-caption font-medium truncate",
                 highlight ? "text-blue-400" : "text-white",
-                mono && "font-mono text-xs"
+                mono && "text-tiny"
             )}>
                 {value}
             </div>

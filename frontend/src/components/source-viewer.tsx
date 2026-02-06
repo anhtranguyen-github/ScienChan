@@ -28,8 +28,8 @@ export function SourceViewer({ source, onClose }: { source: Source, onClose: () 
                             <FileText className="text-blue-400 w-5 h-5" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-white leading-tight">Source [{source.id}]</h2>
-                            <p className="text-xs text-gray-400 truncate max-w-[300px]">{source.name}</p>
+                            <h2 className="text-h3 font-bold text-white leading-tight">Source [{source.id}]</h2>
+                            <p className="text-tiny text-gray-400 truncate max-w-[300px]">{source.name}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl transition-colors text-gray-400 hover:text-white">
@@ -42,7 +42,7 @@ export function SourceViewer({ source, onClose }: { source: Source, onClose: () 
                     <div className="prose prose-invert max-w-none">
                         <div
                             data-testid="source-content"
-                            className="text-gray-300 leading-relaxed whitespace-pre-wrap text-sm md:text-base"
+                            className="text-gray-300 leading-relaxed whitespace-pre-wrap text-caption md:text-body"
                         >
                             {source.content}
                         </div>
@@ -51,10 +51,10 @@ export function SourceViewer({ source, onClose }: { source: Source, onClose: () 
 
                 {/* Footer */}
                 <div className="p-4 px-8 border-t border-white/5 bg-white/2 flex justify-between items-center">
-                    <span className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">Reference Segment</span>
+                    <span className="text-tiny text-gray-500 uppercase tracking-widest">Reference Segment</span>
                     <button
                         onClick={onClose}
-                        className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                        className="text-tiny font-semibold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
                     >
                         Close Preview
                     </button>
