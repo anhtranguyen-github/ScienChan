@@ -1,4 +1,4 @@
-# ScienChan 🔬🚀
+# ScienChan
 
 An advanced, multi-workspace RAG (Retrieval-Augmented Generation) chat application designed for deep document analysis and intelligent conversation.
 
@@ -7,28 +7,30 @@ An advanced, multi-workspace RAG (Retrieval-Augmented Generation) chat applicati
 ![Next.js](https://img.shields.io/badge/frontend-Next.js%2015-black)
 ![FastAPI](https://img.shields.io/badge/backend-FastAPI-009688)
 
-## ✨ Features
+## Features
 
-- **📂 Multi-Workspace Architecture**: Organize documents and chats into isolated workspaces with independent settings.
-- **💬 intelligent Chat**: Converse with your data using multiple modes:
+- **Multi-Workspace Architecture**: Organize documents and chats into isolated workspaces with independent settings.
+- **Master Intelligence Vault**: Centralized console for cross-workspace document management, sharing, and global purging.
+- **Intelligent Chat**: Converse with your data using multiple modes:
   - **Fast**: Quick, direct responses.
   - **Thinking**: More thorough analysis.
   - **Reasoning**: Full chain-of-thought with detailed source citations.
-- **🔍 Global Search**: Unified search across documents, chat history, and workspaces.
-- **🛠️ Advanced RAG Engines**: Support for various retrieval strategies including Vector search and Graph-based RAG.
-- **📄 Document Ingestion**: Seamless ingestion of PDFs, Markdown, and text files with automated chunking and embedding.
-- **⚙️ Provider Agnostic**: Configurable support for OpenAI, Anthropic, Ollama, and more.
+- **Global Search**: Unified search across documents, chat history, and workspaces.
+- **Advanced RAG Engines**: Support for various retrieval strategies including Vector search and Graph-based RAG.
+- **Document Ingestion**: Seamless ingestion of PDFs, Markdown, and text files with automated deduplication and global vault persistence.
+- **Premium UI/UX**: Unified typography using the **Outfit** font and a dark-mode first design aesthetic.
+- **Provider Agnostic**: Configurable support for OpenAI, Anthropic, Ollama, and more.
 
-## 🏗️ Architecture
+## Architecture
 
 - **Frontend**: Next.js (App Router), Tailwind CSS, Framer Motion, and Lucide React.
 - **Backend**: FastAPI, LangGraph for orchestration, and LangChain for LLM integration.
 - **Data Stores**:
-  - **Qdrant**: High-performance vector database for semantic search.
+  - **Qdrant**: High-performance vector database for semantic search and global vault deduplication.
   - **MongoDB**: For session management, workspace metadata, and chat history.
-  - **MinIO**: S3-compatible object storage for paper/document persistence.
+  - **MinIO**: S3-compatible object storage for paper/document persistence with deduplicated storage.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -65,7 +67,7 @@ An advanced, multi-workspace RAG (Retrieval-Augmented Generation) chat applicati
    ./run.sh
    ```
 
-## 🛠️ Development
+## Development
 
 ### Frontend
 ```bash
@@ -83,7 +85,7 @@ pip install -r requirements.txt
 python app/main.py
 ```
 
-## 🧪 Testing
+## Testing
 
 The project includes a comprehensive test suite across the stack.
 
@@ -100,7 +102,7 @@ bun run test:unit    # Unit & Integration
 bun run test:e2e     # End-to-End with Playwright
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -108,10 +110,10 @@ bun run test:e2e     # End-to-End with Playwright
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-Built with ❤️ by the ScienChan Team.
+Built by the ScienChan Team.
