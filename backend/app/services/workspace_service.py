@@ -1,7 +1,10 @@
 import uuid
-from typing import List, Optional, Dict
+import logging
+from datetime import datetime
+from typing import List, Optional, Dict, Any
 from backend.app.core.mongodb import mongodb_manager
 from backend.app.rag.qdrant_provider import qdrant
+from backend.app.core.exceptions import ValidationError, ConflictError, NotFoundError
 
 class WorkspaceService:
     @staticmethod
@@ -20,44 +23,52 @@ class WorkspaceService:
         return enhanced
 
     @staticmethod
-    async def create(data: Dict) -> Dict:
+    async def create(data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new workspace with specified RAG settings."""
         db = mongodb_manager.get_async_database()
-        
         name = data.get("name", "").strip()
-        description = data.get("description")
         
         if not name:
-            raise ValueError("Workspace name cannot be empty.")
+            raise ValidationError("Workspace name cannot be empty.")
             
         illegal_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '[', ']', '{', '}', '(', ')', ';', '&', '$', '#', '@', '!']
-        if any(char in name for char in illegal_chars):
-            raise ValueError(f"Workspace name contains illegal characters. Please use only letters, numbers, underscores, and hyphens.")
+        found_chars = [char for char in illegal_chars if char in name]
+        if found_chars:
+            raise ValidationError(
+                message=f"Workspace name contains invalid characters: {' '.join(found_chars)}",
+                params={"found": found_chars, "illegal": illegal_chars}
+            )
 
         # Check for duplicate name
         existing = await db.workspaces.find_one({"name": name})
         if existing:
-            raise ValueError(f"Workspace with name '{name}' already exists.")
-            
-        ws_id = str(uuid.uuid4())[:8]
-        new_ws = {"id": ws_id, "name": name, "description": description}
-        await db.workspaces.insert_one(new_ws)
+            raise ConflictError(f"A workspace with the name '{name}' already exists.")
 
-        # Initialize Workspace-Specific Fixed RAG Settings
-        from backend.app.core.settings_manager import settings_manager
-        rag_settings = {
-            "rag_engine": data.get("rag_engine", "basic"),
-            "embedding_provider": data.get("embedding_provider", "openai"),
-            "embedding_model": data.get("embedding_model", "text-embedding-3-small"),
-            "embedding_dim": data.get("embedding_dim", 1536),
-            "chunk_size": data.get("chunk_size", 800),
-            "chunk_overlap": data.get("chunk_overlap", 150),
-            "neo4j_uri": data.get("neo4j_uri"),
-            "neo4j_user": data.get("neo4j_user"),
-            "neo4j_password": data.get("neo4j_password"),
-        }
-        await settings_manager.update_settings(rag_settings, workspace_id=ws_id)
+        workspace_id = str(uuid.uuid4())[:8]
+        timestamp = datetime.utcnow().isoformat()
         
-        return new_ws
+        workspace = {
+            "id": workspace_id,
+            "name": name,
+            "description": data.get("description", ""),
+            "created_at": timestamp,
+            "updated_at": timestamp
+        }
+        
+        await db.workspaces.insert_one(workspace)
+
+        # Persist RAG settings via SettingsManager
+        from backend.app.core.settings_manager import settings_manager
+        rag_fields = ["rag_engine", "embedding_provider", "embedding_model", "embedding_dim", "chunk_size", "chunk_overlap", "neo4j_uri", "neo4j_user"]
+        settings_to_apply = {k: data[k] for k in rag_fields if k in data}
+        
+        # We bypass update_settings to avoid immutability check during initial creation
+        await db["workspace_settings"].insert_one({
+            "workspace_id": workspace_id,
+            **settings_to_apply
+        })
+
+        return workspace
 
     @staticmethod
     async def ensure_default_workspace():
@@ -79,7 +90,7 @@ class WorkspaceService:
         return existing or new_ws
 
     @staticmethod
-    async def update(workspace_id: str, data: Dict) -> Optional[Dict]:
+    async def update(workspace_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if workspace_id == "default":
             raise ValueError("The 'default' workspace is a system fallback and cannot be edited.")
             
@@ -92,21 +103,31 @@ class WorkspaceService:
         if "name" in data:
             new_name = data["name"].strip()
             if not new_name:
-                raise ValueError("Workspace name cannot be empty.")
+                raise ValidationError("Workspace name cannot be empty.")
+            
             illegal_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '[', ']', '{', '}', '(', ')', ';', '&', '$', '#', '@', '!']
-            if any(char in new_name for char in illegal_chars):
-                raise ValueError(f"Workspace name contains invalid characters. Please use only letters, numbers, underscores, and hyphens.")
+            found_chars = [char for char in illegal_chars if char in new_name]
+            if found_chars:
+                raise ValidationError(
+                    message=f"Workspace name contains invalid characters: {' '.join(found_chars)}",
+                    params={"found": found_chars}
+                )
             
             existing = await db.workspaces.find_one({"name": new_name, "id": {"$ne": workspace_id}})
             if existing:
-                raise ValueError(f"Workspace with name '{new_name}' already exists.")
+                raise ConflictError(f"A workspace with the name '{new_name}' already exists.")
             data["name"] = new_name
+
+        data["updated_at"] = datetime.utcnow().isoformat()
                 
-        return await db.workspaces.find_one_and_update(
+        result = await db.workspaces.find_one_and_update(
             {"id": workspace_id},
             {"$set": data},
             return_document=True
         )
+        if not result:
+            raise NotFoundError(f"Workspace {workspace_id} not found.")
+        return result
 
     @staticmethod
     async def delete(workspace_id: str, vault_delete: bool = False):

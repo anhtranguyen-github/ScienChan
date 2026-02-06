@@ -80,19 +80,22 @@ export function useDocuments() {
                     force_reindex: forceReindex
                 })
             });
+            const data = await res.json();
+
             if (res.ok) {
                 await fetchDocuments();
                 return { success: true };
             }
-            const data = await res.json();
-            if (res.status === 409) {
+
+            if (data.code === "CONFLICT_ERROR") {
+                // Incompatible configuration or state conflict
                 return { success: false, conflict: true, error: data.detail };
             } else {
-                showError("Migration Failed", data.detail || "Unable to orchestrate document transfer.");
+                showError("Orchestration Failed", data.detail || "Unable to complete document transfer.");
             }
         } catch (err) {
             console.error(`Failed to ${action} document:`, err);
-            showError("Network Error", "Handshake failed during workspace migration.");
+            showError("Network Error", "Handshake failed during data translocation.");
         }
         return { success: false };
     };

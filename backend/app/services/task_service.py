@@ -15,13 +15,14 @@ class TaskService:
             "status": "pending",
             "progress": 0,
             "message": "Initializing...",
+            "error_code": None,
             "metadata": metadata or {},
             "created_at": datetime.utcnow().isoformat(),
             "updated_at": datetime.utcnow().isoformat()
         }
         return task_id
 
-    def update_task(self, task_id: str, status: str = None, progress: int = None, message: str = None, metadata: Dict = None):
+    def update_task(self, task_id: str, status: str = None, progress: int = None, message: str = None, error_code: str = None, metadata: Dict = None):
         if task_id not in self.tasks:
             return
         
@@ -29,6 +30,7 @@ class TaskService:
         if status: task["status"] = status
         if progress is not None: task["progress"] = progress
         if message: task["message"] = message
+        if error_code: task["error_code"] = error_code
         if metadata: task["metadata"].update(metadata)
         
         task["updated_at"] = datetime.utcnow().isoformat()

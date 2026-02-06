@@ -8,6 +8,7 @@ import io
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 from fastapi import UploadFile
+import re
 
 from backend.app.rag.ingestion import ingestion_pipeline
 from backend.app.rag.qdrant_provider import qdrant
@@ -16,6 +17,7 @@ from backend.app.core.minio import minio_manager
 from backend.app.core.mongodb import mongodb_manager
 from backend.app.services.task_service import task_service
 from backend.app.core.settings_manager import settings_manager
+from backend.app.core.exceptions import ValidationError, ConflictError, NotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -25,27 +27,37 @@ class DocumentService:
         """Process and ingest a new document with background task tracking."""
         db = mongodb_manager.get_async_database()
         
-        # 1. Local name duplicate check
-        existing_doc = await db.documents.find_one({"workspace_id": workspace_id, "filename": file.filename})
+        # 1. Filename validation
+        original_filename = file.filename or "unnamed_file"
+        illegal_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+        found_chars = [c for c in illegal_chars if c in original_filename]
+        if found_chars:
+            raise ValidationError(
+                message=f"Filename contains illegal characters: {' '.join(found_chars)}",
+                params={"illegal": found_chars}
+            )
+
+        # 2. Local name duplicate check
+        existing_doc = await db.documents.find_one({"workspace_id": workspace_id, "filename": original_filename})
         if existing_doc:
-            raise ValueError(f"Document '{file.filename}' already exists in this workspace.")
+            raise ConflictError(f"Document '{original_filename}' already exists in this workspace.")
 
         content = await file.read()
         file_size = len(content)
         file_type = file.content_type
         
-        # Sanitize filename immediately for task tracking
-        original_filename = file.filename
-        safe_filename = "".join([c if c.isalnum() or c in "._-" else "_" for c in original_filename])
-        
+        # Sanitize filename for internal storage safety
+        safe_filename = re.sub(r'[^a-zA-Z0-9._-]', '_', original_filename)
+            
         # Create Task
         task_id = task_service.create_task("ingestion", {
-            "filename": safe_filename,
+            "filename": original_filename,
+            "safe_filename": safe_filename,
             "workspace_id": workspace_id,
             "size": file_size
         })
         
-        return task_id, content, safe_filename, file_type
+        return task_id, content, original_filename, file_type
 
     async def run_ingestion(self, task_id: str, safe_filename: str, content: bytes, content_type: str, workspace_id: str):
         """Internal method to run the pipeline steps with global vault deduplication."""
@@ -144,7 +156,14 @@ class DocumentService:
                     
         except Exception as e:
             logger.error(f"Background ingestion failed for {safe_filename}: {e}")
-            task_service.update_task(task_id, status="failed", message=str(e))
+            error_msg = str(e)
+            error_code = "INTERNAL_ERROR"
+            if "illegal path" in error_msg.lower():
+                error_code = "ILLEGAL_PATH"
+            elif "connection" in error_msg.lower():
+                error_code = "CONNECTION_ERROR"
+                
+            task_service.update_task(task_id, status="failed", message=error_msg, error_code=error_code)
             await db.documents.update_one({"id": doc_id}, {"$set": {"status": "failed"}})
 
     @staticmethod
@@ -227,7 +246,8 @@ class DocumentService:
                     {"shared_with": workspace_id}
                 ]
             })
-        if not doc: return
+        if not doc: 
+            raise NotFoundError(f"Document '{name}' not found in target context.")
 
         if vault_delete:
             # GLOBAL DELETE: Purge everything
@@ -245,11 +265,11 @@ class DocumentService:
                 if await qdrant.client.collection_exists(coll):
                     await qdrant.client.delete(
                         collection_name=coll,
-                        points_selector=qmodels.Filter(must=[qmodels.FieldCondition(key="doc_id", match=qmodels.MatchValue(value=doc["id"]))])
+                        points_selector=qmodels.Filter(must=[qmodels.FieldCondition(key="content_hash", match=qmodels.MatchValue(value=doc["content_hash"]))])
                     )
 
-            # 3. Database removal
-            await db.documents.delete_one({"id": doc["id"]})
+            # 3. Database removal: Delete ALL records sharing this file path
+            await db.documents.delete_many({"minio_path": doc["minio_path"]})
         else:
             # LOCAL REMOVAL: Remove association from this workspace only
             if doc["workspace_id"] == workspace_id:
@@ -345,7 +365,8 @@ class DocumentService:
         """Cross-workspace orchestration (move/share) with RAG Config auditing."""
         db = mongodb_manager.get_async_database()
         res = await db.documents.find_one({"filename": name})
-        if not res: return
+        if not res:
+            raise NotFoundError(f"Document '{name}' not found.")
 
         target_settings = await settings_manager.get_settings(target_workspace_id)
         target_rag_hash = target_settings.get_rag_hash()
@@ -354,7 +375,10 @@ class DocumentService:
         is_config_compatible = res.get("rag_config_hash") == target_rag_hash
         
         if not is_config_compatible and not force_reindex:
-            raise ValueError(f"Incompatible Workspace: Target RAG config ({target_rag_hash}) differs from Document ({res.get('rag_config_hash')})")
+            raise ConflictError(
+                message=f"Incompatible Workspace: Target RAG config ({target_rag_hash}) differs from Document ({res.get('rag_config_hash')})",
+                params={"type": "rag_mismatch", "expected": res.get("rag_config_hash"), "actual": target_rag_hash}
+            )
 
         if force_reindex or (not is_config_compatible):
             # Full Re-indexing Flow (Using shared vault document)

@@ -108,12 +108,16 @@ test.describe('Document Upload Failure Handling', () => {
     });
 
     test('should show user-friendly error for invalid filenames (illegal path)', async ({ page }) => {
-        // Mock "illegal path" error from backend (MinIO usually throws this)
+        // Since we have optimistic validation, we expect the UI to catch it immediately.
+        // We'll also test the backend fallback just in case.
         await page.route('**/upload**', async route => {
             await route.fulfill({
                 status: 400,
                 contentType: 'application/json',
-                body: JSON.stringify({ detail: "Unable to add filesystem: <illegal path>" })
+                body: JSON.stringify({
+                    code: "VALIDATION_ERROR",
+                    detail: "Filename contains illegal characters: :"
+                })
             });
         });
 
@@ -128,9 +132,35 @@ test.describe('Document Upload Failure Handling', () => {
             buffer: Buffer.from('fake content')
         });
 
-        // Expect specific "Invalid Filename" modal
+        // The specific text is now slightly different based on the structured params/message
         await expect(page.getByText('Invalid Filename')).toBeVisible();
-        await expect(page.getByText('The filename contains characters that are not allowed')).toBeVisible();
+        await expect(page.getByText('contains characters that are not allowed')).toBeVisible();
+    });
+    test('should show error for duplicate document (CONFLIT_ERROR)', async ({ page }) => {
+        await page.route('**/upload**', async route => {
+            await route.fulfill({
+                status: 409,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    code: "CONFLICT_ERROR",
+                    detail: "Document already exists"
+                })
+            });
+        });
+
+        await page.goto('/workspaces/default/documents');
+
+        const fileInput = page.locator('input[type="file"]');
+        await expect(page.getByRole('button', { name: 'Upload Document' })).toBeVisible();
+
+        await fileInput.setInputFiles({
+            name: 'duplicate.pdf',
+            mimeType: 'application/pdf',
+            buffer: Buffer.from('content')
+        });
+
+        await expect(page.getByText('Duplicate Document')).toBeVisible();
+        await expect(page.getByText('already exists')).toBeVisible();
     });
 
 });

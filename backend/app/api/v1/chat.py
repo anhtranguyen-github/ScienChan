@@ -3,6 +3,8 @@ from fastapi.responses import StreamingResponse
 import asyncio
 from backend.app.services.chat_service import chat_service
 
+from backend.app.core.exceptions import ValidationError, NotFoundError
+
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 @router.get("/history/{thread_id}")
@@ -18,7 +20,7 @@ async def update_thread_title(thread_id: str, request: Request):
     data = await request.json()
     title = data.get("title")
     if not title:
-        raise HTTPException(status_code=400, detail="Title is required")
+        raise ValidationError("Title is required")
     await chat_service.update_title(thread_id, title)
     return {"status": "success", "title": title}
 

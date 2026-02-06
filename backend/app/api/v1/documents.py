@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Request, UploadFile, File, HTTPException, BackgroundTasks
 from backend.app.services.document_service import document_service
 
+from backend.app.core.exceptions import ValidationError, NotFoundError
+
 router = APIRouter(tags=["documents"])
 
 @router.post("/upload")
@@ -9,24 +11,19 @@ async def upload_document(
     file: UploadFile = File(...), 
     workspace_id: str = "default"
 ):
-    try:
-        task_id, content, filename, content_type = await document_service.upload(file, workspace_id)
-        
-        # Dispatch background task
-        background_tasks.add_task(
-            document_service.run_ingestion,
-            task_id, filename, content, content_type, workspace_id
-        )
-        
-        return {
-            "status": "pending", 
-            "task_id": task_id,
-            "message": "Ingestion started in background."
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    task_id, content, filename, content_type = await document_service.upload(file, workspace_id)
+    
+    # Dispatch background task
+    background_tasks.add_task(
+        document_service.run_ingestion,
+        task_id, filename, content, content_type, workspace_id
+    )
+    
+    return {
+        "status": "pending", 
+        "task_id": task_id,
+        "message": "Ingestion started in background."
+    }
 
 @router.get("/documents")
 async def list_documents(workspace_id: str = "default"):
@@ -40,7 +37,7 @@ async def list_all_documents():
 async def get_document(name: str):
     doc = await document_service.get_by_id_or_name(name)
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise NotFoundError(f"Document '{name}' not found")
     
     content = await document_service.get_content(name)
     doc["content"] = content
@@ -68,12 +65,7 @@ async def update_document_workspaces(request: Request):
     force_reindex = data.get("force_reindex", False)
     
     if not name or not target_workspace_id:
-        raise HTTPException(status_code=400, detail="name and target_workspace_id are required")
+        raise ValidationError("Name and target_workspace_id are required")
         
-    try:
-        await document_service.update_workspaces(name, target_workspace_id, action, force_reindex=force_reindex)
-    except ValueError as e:
-        if "Incompatible Workspace" in str(e):
-             raise HTTPException(status_code=409, detail=str(e)) # 409 Conflict for mismatch
-        raise HTTPException(status_code=400, detail=str(e))
+    await document_service.update_workspaces(name, target_workspace_id, action, force_reindex=force_reindex)
     return {"status": "success", "message": f"Document {name} {action}ed successfully."}

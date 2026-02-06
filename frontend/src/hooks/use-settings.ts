@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_ROUTES } from '@/lib/api-config';
+import { useError } from '@/context/error-context';
 
 export interface AppSettings {
     llm_provider: string;
@@ -16,6 +17,7 @@ export interface AppSettings {
 export function useSettings(workspaceId?: string) {
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { showError } = useError();
 
     const fetchSettings = useCallback(async () => {
         try {
@@ -23,6 +25,10 @@ export function useSettings(workspaceId?: string) {
                 ? `${API_ROUTES.SETTINGS}?workspace_id=${encodeURIComponent(workspaceId)}`
                 : API_ROUTES.SETTINGS;
             const res = await fetch(url);
+            if (!res.ok) {
+                showError("Configuration Hub Offline", "Unable to retrieve synchronization parameters. Defaulting to local cache.");
+                return;
+            }
             const data = await res.json();
             setSettings(data);
         } catch (err) {
@@ -30,7 +36,7 @@ export function useSettings(workspaceId?: string) {
         } finally {
             setIsLoading(false);
         }
-    }, [workspaceId]);
+    }, [workspaceId, showError]);
 
     const updateSettings = async (updates: Partial<AppSettings>) => {
         try {
@@ -43,11 +49,25 @@ export function useSettings(workspaceId?: string) {
                 body: JSON.stringify(updates),
             });
             const data = await res.json();
-            setSettings(data);
-            return data;
+
+            if (res.ok) {
+                setSettings(data);
+                return data;
+            } else {
+                let title = "Deployment Failed";
+                let message = data.detail || "The cluster rejected the configuration update.";
+
+                if (data.code === "VALIDATION_ERROR") {
+                    title = "Invalid Parameter Scope";
+                }
+
+                showError(title, message, data.params ? JSON.stringify(data.params) : undefined);
+                return null;
+            }
         } catch (err) {
             console.error('Failed to update settings:', err);
-            throw err;
+            showError("Transmission Failure", "Handshake timed out while deploying neural parameters.");
+            return null;
         }
     };
 

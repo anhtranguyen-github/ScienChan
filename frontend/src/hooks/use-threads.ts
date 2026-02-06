@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { API_ROUTES } from '@/lib/api-config';
+import { useError } from '@/context/error-context';
 
 export interface Thread {
     id: string;
@@ -11,6 +12,7 @@ export interface Thread {
 export function useThreads(workspaceId: string = "default") {
     const [threads, setThreads] = useState<Thread[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const { showError } = useError();
 
     const fetchThreads = useCallback(async () => {
         setIsLoading(true);
@@ -28,17 +30,27 @@ export function useThreads(workspaceId: string = "default") {
     }, [workspaceId]);
 
     const updateThreadTitle = async (id: string, title: string) => {
+        if (!title.trim()) {
+            showError("Invalid Input", "Chat title cannot be empty.");
+            return;
+        }
+
         try {
             const res = await fetch(API_ROUTES.THREAD_TITLE(id), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title })
             });
+            const data = await res.json();
+
             if (res.ok) {
                 await fetchThreads();
+            } else {
+                showError("Rebranding Failed", data.detail || "Unable to update synchronization descriptor.");
             }
         } catch (err) {
             console.error('Failed to update thread title:', err);
+            showError("Transmission Failure", "Lost connection to neural bridge while updating thread.");
         }
     };
 
@@ -49,9 +61,13 @@ export function useThreads(workspaceId: string = "default") {
             });
             if (res.ok) {
                 await fetchThreads();
+            } else {
+                const data = await res.json();
+                showError("Decommissioning Failed", data.detail || "Unable to purge thread memory.");
             }
         } catch (err) {
             console.error('Failed to delete thread:', err);
+            showError("Network Error", "The thread purge request was interrupted by a network flicker.");
         }
     };
 

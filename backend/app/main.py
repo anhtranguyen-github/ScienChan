@@ -1,10 +1,12 @@
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from backend.app.api.v1 import api_v1_router
 from backend.app.core.config import ai_settings
+from backend.app.core.exceptions import BaseAppException
 
 # Configure logging
 logging.basicConfig(
@@ -67,6 +69,17 @@ def create_app() -> FastAPI:
     logger.info("Including API routers...")
     app.include_router(api_v1_router)
     logger.info("API routers included.")
+
+    @app.exception_handler(BaseAppException)
+    async def app_exception_handler(request: Request, exc: BaseAppException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "code": exc.code,
+                "detail": exc.message,
+                "params": exc.params
+            }
+        )
 
     return app
 

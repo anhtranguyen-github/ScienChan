@@ -7,6 +7,9 @@ from backend.app.core.schemas import AppSettings
 from backend.app.core.config import ai_settings
 from backend.app.core.mongodb import mongodb_manager
 
+from pydantic import ValidationError as PydanticValidationError
+from backend.app.core.exceptions import ValidationError, NotFoundError
+
 logger = logging.getLogger(__name__)
 
 class SettingsManager:
@@ -66,30 +69,54 @@ class SettingsManager:
             override_data = {k: v for k, v in ws_settings_doc.items() if k not in ["_id", "workspace_id"]}
             merged_data.update(override_data)
             
-            return AppSettings(**merged_data)
+            try:
+                return AppSettings(**merged_data)
+            except PydanticValidationError as e:
+                logger.error(f"Schema mismatch for workspace {workspace_id}: {e}")
+                return self._global_settings
         except Exception as e:
             logger.error(f"Error fetching settings for workspace {workspace_id}: {e}")
             return self._global_settings
 
     async def update_settings(self, updates: Dict[str, Any], workspace_id: Optional[str] = None) -> AppSettings:
         """Update settings for a workspace or global."""
-        if not workspace_id or workspace_id == "default":
-            current_data = self._global_settings.model_dump()
-            current_data.update(updates)
-            self._global_settings = AppSettings(**current_data)
-            
-            # Save to disk
-            self._save_global_settings()
-            return self._global_settings
-        else:
-            # Update in MongoDB
-            db = mongodb_manager.get_async_database()
-            await db["workspace_settings"].update_one(
-                {"workspace_id": workspace_id},
-                {"$set": updates},
-                upsert=True
+        
+        # 1. Audit: Prevent modification of core RAG parameters if they break consistency
+        immutable_fields = ["embedding_provider", "embedding_model", "chunk_size", "chunk_overlap", "embedding_dim", "rag_engine"]
+        
+        if workspace_id and workspace_id != "default":
+            if any(k in updates for k in immutable_fields):
+                raise ValidationError(
+                    message="Core RAG parameters (provider, model, chunking, dimension, engine) cannot be modified after workspace creation to ensure vector consistency.",
+                    params={"immutable": immutable_fields}
+                )
+
+        try:
+            if not workspace_id or workspace_id == "default":
+                current_data = self._global_settings.model_dump()
+                current_data.update(updates)
+                self._global_settings = AppSettings(**current_data)
+                self._save_global_settings()
+                return self._global_settings
+            else:
+                # Validate updates by merging with current and testing against schema
+                current = await self.get_settings(workspace_id)
+                current_data = current.model_dump()
+                current_data.update(updates)
+                AppSettings(**current_data) # Dry run validation
+                
+                db = mongodb_manager.get_async_database()
+                await db["workspace_settings"].update_one(
+                    {"workspace_id": workspace_id},
+                    {"$set": updates},
+                    upsert=True
+                )
+                return await self.get_settings(workspace_id)
+        except PydanticValidationError as e:
+            raise ValidationError(
+                message="Invalid settings configuration.",
+                params={"errors": e.errors()}
             )
-            return await self.get_settings(workspace_id)
 
 # Global singleton
 settings_manager = SettingsManager()

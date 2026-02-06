@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { API_ROUTES } from '@/lib/api-config';
+import { useError } from '@/context/error-context';
 
 export interface ToolDefinition {
     id: string;
@@ -13,7 +14,7 @@ export interface ToolDefinition {
 export function useTools() {
     const [tools, setTools] = useState<ToolDefinition[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const { showError } = useError();
 
     const fetchTools = useCallback(async () => {
         setIsLoading(true);
@@ -23,14 +24,14 @@ export function useTools() {
                 const data = await res.json();
                 setTools(data);
             } else {
-                throw new Error('Failed to fetch tools');
+                showError("Subsystem Timeout", "Unable to list active intelligence extensions.");
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            console.error('Failed to fetch tools:', err);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [showError]);
 
     const toggleTool = useCallback(async (id: string, enabled: boolean) => {
         try {
@@ -39,11 +40,15 @@ export function useTools() {
             });
             if (res.ok) {
                 setTools(prev => prev.map(t => t.id === id ? { ...t, enabled } : t));
+            } else {
+                const data = await res.json();
+                showError("Interface Error", data.detail || "Unable to modify extension state.");
             }
         } catch (err) {
             console.error('Failed to toggle tool', err);
+            showError("Network Error", "Lost tactical link during extension state modification.");
         }
-    }, []);
+    }, [showError]);
 
     const addTool = useCallback(async (tool: ToolDefinition) => {
         try {
@@ -52,16 +57,25 @@ export function useTools() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(tool),
             });
+            const data = await res.json();
+
             if (res.ok) {
                 await fetchTools();
                 return true;
+            } else {
+                let title = "Registration Failed";
+                if (data.code === "CONFLICT_ERROR") {
+                    title = "Identifier Conflict";
+                }
+                showError(title, data.detail || "The system rejected the extension registration.");
+                return false;
             }
-            return false;
         } catch (err) {
             console.error('Failed to add tool', err);
+            showError("Network Error", "Handshake failed during extension deployment.");
             return false;
         }
-    }, [fetchTools]);
+    }, [fetchTools, showError]);
 
     const deleteTool = useCallback(async (id: string) => {
         try {
@@ -70,11 +84,15 @@ export function useTools() {
             });
             if (res.ok) {
                 setTools(prev => prev.filter(t => t.id !== id));
+            } else {
+                const data = await res.json();
+                showError("Decommissioning Refused", data.detail || "The system refused to purge the intelligence extension.");
             }
         } catch (err) {
             console.error('Failed to delete tool', err);
+            showError("Network Error", "Transmission lost during decommissioning sequence.");
         }
-    }, []);
+    }, [showError]);
 
     useEffect(() => {
         fetchTools();

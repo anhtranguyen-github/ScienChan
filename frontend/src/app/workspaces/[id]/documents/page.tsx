@@ -75,15 +75,12 @@ export default function DocumentsPage() {
                     );
 
                     for (const task of failedTasks) {
-                        const rawMessage = task.message || "";
-                        let displayMessage = "The system encountered an error while processing this document.";
                         let displayTitle = "Ingestion Failed";
+                        let displayMessage = task.message || "The system encountered an error while processing this document.";
 
-                        if (rawMessage.includes('illegal path')) {
+                        if (task.error_code === 'ILLEGAL_PATH') {
                             displayTitle = "Invalid Filename";
                             displayMessage = "The filename contains characters that are not allowed by the storage system.";
-                        } else if (rawMessage) {
-                            displayMessage = rawMessage;
                         }
 
                         showError(
@@ -119,6 +116,15 @@ export default function DocumentsPage() {
         const file = e.target.files?.[0];
         if (!file || !workspaceId) return;
 
+        // Optimistic Validation
+        const illegalChars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+        const found = illegalChars.filter(c => file.name.includes(c));
+        if (found.length > 0) {
+            showError("Invalid Filename", `The filename contains characters that are not allowed: ${found.join(' ')}. Please rename the file.`);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
         setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
@@ -133,15 +139,16 @@ export default function DocumentsPage() {
                 // Task is now handled by the polling effect
                 await res.json();
             } else {
-                const error = await res.json();
-                const rawError = error.detail || 'Upload failed';
-
+                const data = await res.json();
                 let title = "Ingestion Rejected";
-                let message = rawError;
+                let message = data.detail || 'Upload failed';
 
-                if (rawError.includes('illegal path')) {
+                if (data.code === 'VALIDATION_ERROR') {
                     title = "Invalid Filename";
-                    message = "The filename contains characters that are not allowed. Please rename the file and try again.";
+                    message = data.detail; // Backend gives specifics about invalid chars
+                } else if (data.code === 'CONFLICT_ERROR') {
+                    title = "Duplicate Document";
+                    message = "A document with this name already exists in this workspace.";
                 }
 
                 showError(title, message, `File: ${file.name}`);
