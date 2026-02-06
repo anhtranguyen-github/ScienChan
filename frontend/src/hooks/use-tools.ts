@@ -101,7 +101,6 @@ export function useTools() {
     return {
         tools,
         isLoading,
-        error,
         fetchTools,
         toggleTool,
         addTool,
