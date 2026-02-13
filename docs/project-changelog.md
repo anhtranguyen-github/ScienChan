@@ -1,3 +1,16 @@
+## [2026-02-13] - Typography & Design System Refactor
+
+### Changed
+- **Typography Standard**: Enforced global prohibition of italic and all-uppercase text styles per `/master` directive.
+- **Frontend Refactor**: Removed `uppercase`, `italic`, and `tracking-widest` utility classes from all 29+ frontend components.
+- **CSS Globals**: Removed `text-transform: uppercase` from global Heading styles.
+- **Showcase Assets**: Updated showcase screenshots to reflect new typography.
+
+### Added
+- **Design Constraints**: Created `docs/constraints/ui_design.md` documenting the new typography rules.
+
+---
+
 ## [2026-02-13] - Admin Console Consolidation & Showcase Update
 
 ### Added
