@@ -1,4 +1,45 @@
-## [2026-02-11] - Optimization: Performance & N+1 Query Fixes
+## [2026-02-13] - Feature: Centralized Admin Console & System Observability
+
+### Added
+- **Admin Console**: Implemented a comprehensive administrative control center with dashboard-style layout and sidebar navigation.
+- **Neural Provider Management**: Dedicated page to configure and audit LLM and Embedding providers (OpenAI, Anthropic, Ollama, etc.) with real-time sync with the backend kernel.
+- **Global Configuration Hub**: Interface for managing application-wide settings, search sensitivity (Hybrid Alpha), and UI behaviors.
+- **Prometheus Metrics Dashboard**: Real-time visualization of system metrics (request latency, errors, active chat streams) directly from the Prometheus exporter.
+- **Trace Explorer Integration**: Seamless link to Jaeger for distributed tracing analysis of RAG pipelines and reasoning chains.
+- **Seamless Navigation**: Integrated "Admin Console" entry points in the primary workspace switcher and global headers.
+
+### Changed
+- **Hardcoding Elimination**: Removed hardcoded URLs and constants from the Admin Panel. 
+    - Moved Jaeger and Prometheus URLs to `EXTERNAL_SERVICES` in `api-config.ts` with environment variable support.
+    - Centralized provider-specific setting keys in `lib/constants.ts`.
+    - Refactored `ProvidersPage` to dynamically fetch option lists (openai, ollama, etc.) from the backend metadata instead of using hardcoded arrays.
+- **Backend Metadata Enhancement**: Updated the `SettingsManager` to expose allowed options for `Literal` setting types in the metadata API.
+
+### Technical Notes
+- **Next.js 15 App Router**: Leveraged layouts and sub-routes for modular admin page architecture.
+- **Premium Aesthetics**: Used "Outfit" typography, dark-mode first design, Framer Motion for smooth state transitions, and high-contrast neural-themed accents.
+- **Provider Sync**: Direct integration with the backend `SettingsManager` ensuring immediate application of non-core parameters.
+- **Observability**: Implemented a raw Prometheus metric stream viewer with a partial parser for the "four golden signals".
+
+### Edge Cases Handled
+- ✅ **Observability Offline**: Implemented graceful fallbacks and error states if Prometheus or Jaeger services are unreachable.
+- ✅ **Parameter Immutability**: Integrated schema metadata checks to prevent UI-level modification of core parameters (e.g., embedding dimensions) that require environment rebuilds.
+
+## [2026-02-12] - Fix: Unified Response High-Reliability & Schema Alignment
+
+### Fixed
+- **AppResponse Schema Crash**: Fixed a `TypeError` on the backend where `success_response` was called without the required `data` argument, causing `500 Internal Server Error` and frontend fetch failures (specifically during workspace deletion).
+- **Schema Resilience**: Updated `AppResponse` classmethods to explicitly handle `None` values and provide safe defaults for `code`, `message`, and `data`.
+- **Error Handling Alignment**: Standardized `BaseAppException` handler in `main.py` to follow the `AppResponse` JSON contract (`success`, `code`, `message`, `data`), ensuring the frontend can consistently parse errors using the same Zod schemas as success responses.
+- **API Audit**: Audited and standardized response paths in `tasks.py`, `tools.py`, and `documents.py` to use `AppResponse` factory methods instead of raw dicts or inconsistent field names (e.g., `detail/params`).
+
+### Changed
+- **Backend Constraints**: Updated `docs/constraints/backend-constraints.md` to mandate that all business-level exceptions must be caught and wrapped in a standard `AppResponse` structure by the global exception handler.
+
+### Edge Cases Handled
+- ✅ **Empty Success Responses**: Endpoints can now safely return "Success" messages without payload data without triggering Pydantic validation errors.
+- ✅ **Frontend Fetch Resiliency**: Prevented browser-level "Failed to fetch" errors by ensuring the backend gracefully closes the request with a structured JSON error instead of crashing.
+
 
 ### Optimized
 - **Workspace Listing**: Replaced N+1 query loop in `WorkspaceService.list_all` (N*2 queries) with a single MongoDB Aggregation Pipeline (`$lookup` + `$project`), reducing latency for workspace dashboards.
