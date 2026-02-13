@@ -1,3 +1,16 @@
+## [2026-02-13] - Admin Console Consolidation & Showcase Update
+
+### Added
+- **Admin Console Redesign**: Consolidated disparate admin pages (Overview, Providers, Settings, Metrics, Traces) into a single, unified "System Control" dashboard with tabbed navigation.
+- **Showcase Screenshots**: Added 5 high-resolution screenshot assets for project showcase (User Dashboard, Chat, Vault, Admin Overview, Observability).
+
+### Changed
+- **Screenshot Pipeline**: Updated `capture_features.spec.ts` to capture specific showcase views.
+- **Documentation**: Updated README with a new "System Showcase" section featuring the consolidated UI.
+- **Code Cleanup**: Removed legacy admin routes (`/admin/providers`, `/admin/settings`, etc.) and sidebar component.
+
+---
+
 ## [2026-02-13] - Real Application Screenshots & Bug Fixes
 
 ### Fixed
