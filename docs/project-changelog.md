@@ -1,3 +1,17 @@
+## [2026-02-13] - Documentation & Visual Identity Refinement
+
+### Added
+- **Visual Identity Update**: Refreshed all project screenshots (Dashboard, Chat, Vault, Document Management, Workspace Overview) to reflect the current UI state.
+- **Admin Panel Showcase**: Added dedicated screenshots and documentation for the new Admin Console.
+- **Operations & Monitoring Documentation**: Added a new section to `README.md` detailing the observability stack (Prometheus, Jaeger, OpenTelemetry) and the self-healing runner (`run.sh`).
+- **Automated Capture Pipeline**: Updated Playwright-based screenshot script (`capture_features.spec.ts`) to automate visual asset regeneration.
+
+### Changed
+- **Requirements Update**: Corrected `docs/RPD.md` to reflect `pnpm` as the mandatory frontend package manager (removed outdated `bun` reference).
+- **README Enhancement**: Integrated the Admin Console and Operations details into the primary project overview.
+
+---
+
 ## [2026-02-13] - Feature: Centralized Admin Console & System Observability
 
 ### Added
