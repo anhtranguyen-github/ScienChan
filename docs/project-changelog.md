@@ -1,3 +1,15 @@
+## [2026-02-13] - Real Application Screenshots & Bug Fixes
+
+### Fixed
+- **ObjectId Serialization Bug**: Fixed `PydanticSerializationError` in `GET /workspaces/{id}/details` — MongoDB `_id` (ObjectId) was not stripped from the workspace dict before Pydantic serialization.
+- **Backend Test Assertions**: Fixed `test_default_workspace.py` to properly unwrap `AppResponse` format (`data` field for list, `message` field for errors).
+
+### Changed
+- **Screenshot Pipeline**: Rewrote `capture_features.spec.ts` to capture screenshots from the **real running application** instead of using mock data.
+- **Removed screenshots from README and git tracking**: Screenshots are now gitignored and generated locally via Playwright.
+
+---
+
 ## [2026-02-13] - Documentation & Visual Identity Refinement
 
 ### Added
